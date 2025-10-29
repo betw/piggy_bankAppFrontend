@@ -4,32 +4,32 @@
       <h1>Piggy Bank — Trip Savings</h1>
     </header>
 
-    <NavigationBar />
+          <NavigationBar />
 
     <main>
-      <HomeView v-if="app.currentView === 'Home'" />
-      <AllGoalsView v-else-if="app.currentView === 'AllGoals'" />
-      <NotificationsView v-else-if="app.currentView === 'Notifications'" />
-      <TravelGoalDetailView v-else-if="app.currentView === 'GoalDetail'" />
+            <router-view />
     </main>
 
   </div>
 </template>
 
 <script>
+import { onMounted } from 'vue'
 import NavigationBar from './components/NavigationBar.vue'
-import HomeView from './views/HomeView.vue'
-import AllGoalsView from './views/AllGoalsView.vue'
-import NotificationsView from './views/NotificationsView.vue'
-import TravelGoalDetailView from './views/TravelGoalDetailView.vue'
-import { useAppStore } from './stores/app'
+import { useUserStore } from './stores/user'
+import { useTravelPlanStore } from './stores/travelPlan'
 
 export default {
   name: 'App',
-  components: { NavigationBar, HomeView, AllGoalsView, NotificationsView, TravelGoalDetailView },
+  components: { NavigationBar },
   setup() {
-    const app = useAppStore()
-    return { app }
+    const userStore = useUserStore()
+    const travelPlanStore = useTravelPlanStore()
+    onMounted(() => {
+      userStore.hydrate()
+      travelPlanStore.hydrate()
+    })
+    return {}
   }
 }
 </script>
