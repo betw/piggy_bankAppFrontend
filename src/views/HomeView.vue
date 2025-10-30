@@ -50,6 +50,15 @@ export default {
   const userStore = useUserStore()
 
     
+    function resolveUserId(user) {
+      if (!user) return null
+      if (typeof user === 'string') return user
+      if (typeof user === 'object') {
+        return user.id ?? user.userId ?? user.userID ?? user.username ?? user.name ?? null
+      }
+      return null
+    }
+
     async function onSubmit() {
       // guard to avoid double-submit
       if (loading.value) return
@@ -84,26 +93,22 @@ export default {
         loading.value = true
         const travelPlanStore = useTravelPlanStore()
         try {
+          const userId = resolveUserId(userStore.currentUser)
+          if (!userId) {
+            error.value = 'You must be logged in to create a travel plan.'
+            router.push('/login')
+            return
+          }
           const body = {
+            user: userId,
             fromCity: fromCity.value,
             toCity: toCity.value,
             fromDate: fromDate.value,
             toDate: toDate.value
           }
-          if (userStore.currentUser) {
-            body.user = userStore.currentUser
-          } else {
-            // don't include null user in payload; log for debugging and continue as anonymous
-            console.warn('[HomeView] no user logged in — sending anonymous travel plan')
-          }
           // debug: show the payload in browser console so we can confirm handler ran
           console.log('[HomeView] submitting travel plan', body)
             // require login before creating a travel plan
-            if (!userStore.currentUser) {
-              error.value = 'You must be logged in to create a travel plan.'
-              router.push('/login')
-              return
-            }
             const travelPlan = await travelPlanStore.createTravelPlan(body)
           const id = travelPlan?.id ?? travelPlan
           if (id === undefined || id === null) {

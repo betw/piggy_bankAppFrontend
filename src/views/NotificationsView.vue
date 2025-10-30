@@ -1,7 +1,7 @@
 <template>
   <section>
     <h2>Notifications</h2>
-    <div class="notifications-list">
+    <div v-if="notifications.length" class="notifications-list">
       <TripNotification
         v-for="(notif, idx) in notifications"
         :key="idx"
@@ -11,11 +11,13 @@
         style="cursor:pointer;"
       />
     </div>
+    <p v-else class="empty-state">Notifications will appear after creating your first travel goal.</p>
     <button @click="goHome">Home</button>
   </section>
 </template>
 
 <script>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import TripNotification from '../components/TripNotification.vue'
 
@@ -27,17 +29,11 @@ export default {
     function goHome() {
       router.push('/')
     }
-    // Dummy notifications for demo
-    const notifications = [
-      { id: 1, title: 'Trip to Paris', message: 'Don’t forget to book your hotel!' },
-      { id: 2, title: 'Trip to Tokyo', message: 'Visa application deadline is next week.' },
-      { id: 3, title: 'Trip to New York', message: 'Check your flight status.' }
-    ]
+    const notifications = ref([])
     function goToGoalDetail(id) {
       router.push(`/goal/${id}`)
     }
     return { goHome, notifications, goToGoalDetail }
-    return { goHome, notifications }
   }
 }
 </script>
@@ -47,6 +43,11 @@ export default {
   flex-direction: column;
   align-items: stretch;
   margin-bottom: 2rem;
+}
+.empty-state {
+  margin: 2rem 0;
+  color: #666;
+  font-size: 1rem;
 }
 .trip-notification {
   background: #fffbe6;

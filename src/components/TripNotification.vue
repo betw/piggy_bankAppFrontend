@@ -20,10 +20,19 @@
           <div class="meta-row" v-if="travelPlan.necessity.accommodation !== undefined">Accommodation: {{ travelPlan.necessity.accommodation }}</div>
           <div class="meta-row" v-if="travelPlan.necessity.diningFlag !== undefined">Dining out: {{ travelPlan.necessity.diningFlag ? 'Yes' : 'No' }}</div>
         </div>
-        <div class="costs" v-if="travelPlan.latestCostEstimate || travelPlan.costEstimate || travelPlan.mostRecentCostEstimate">
+        <div class="costs" v-if="hasCostData">
           <div class="meta-title">Cost</div>
-          <div class="meta-row">
-            {{ buildCostSummary(travelPlan.latestCostEstimate || travelPlan.costEstimate || travelPlan.mostRecentCostEstimate) }}
+          <div class="meta-row" v-if="costEstimate.flight !== null">
+            Flight: <strong>{{ formatCurrency(costEstimate.flight) }}</strong>
+          </div>
+          <div class="meta-row" v-if="costEstimate.roomsPerNight !== null">
+            Room/night: <strong>{{ formatCurrency(costEstimate.roomsPerNight) }}</strong>
+          </div>
+          <div class="meta-row" v-if="costEstimate.foodDaily !== null">
+            Food/day: <strong>{{ formatCurrency(costEstimate.foodDaily) }}</strong>
+          </div>
+          <div class="meta-row" v-if="normalizedTotalCost !== null">
+            Total: <strong>{{ formatCurrency(normalizedTotalCost) }}</strong>
           </div>
         </div>
       </div>
@@ -64,6 +73,32 @@ export default {
       if (this.travelPlan.fromDate) parts.push(`Depart: ${this.formatDate(this.travelPlan.fromDate)}`)
       if (this.travelPlan.toDate) parts.push(`Return: ${this.formatDate(this.travelPlan.toDate)}`)
       return parts.join(' · ')
+    },
+    rawCostEstimate() {
+      if (!this.travelPlan) return null
+      return this.travelPlan.latestCostEstimate || this.travelPlan.costEstimate || this.travelPlan.mostRecentCostEstimate || null
+    },
+    costEstimate() {
+      const ce = this.normalizeEstimate(this.rawCostEstimate)
+      return {
+        flight: ce?.flight ?? null,
+        roomsPerNight: ce?.roomsPerNight ?? null,
+        foodDaily: ce?.foodDaily ?? null
+      }
+    },
+    normalizedTotalCost() {
+      if (!this.travelPlan) return null
+      const val = this.travelPlan.totalCost ?? this.travelPlan.total_cost ?? null
+      const normalized = this.normalizeNumber(val)
+      return normalized === null ? null : normalized
+    },
+    hasCostData() {
+      return (
+        this.costEstimate.flight !== null ||
+        this.costEstimate.roomsPerNight !== null ||
+        this.costEstimate.foodDaily !== null ||
+        this.normalizedTotalCost !== null
+      )
     }
   },
   methods: {
@@ -79,16 +114,34 @@ export default {
       if (isNaN(dt)) return String(d)
       return dt.toLocaleDateString()
     },
-    buildCostSummary(ci) {
-      if (!ci) return ''
-      const flight = ci.flight ?? ci.flight_cost ?? ci.flightEstimate
-      const rooms = ci.rooms_per_night ?? ci.roomsPerNight ?? ci.room_nightly
-      const food = ci.food_daily ?? ci.foodDaily
-      const parts = []
-      if (flight !== undefined && flight !== null) parts.push(`Flight: ${flight}`)
-      if (rooms !== undefined && rooms !== null) parts.push(`Room/night: ${rooms}`)
-      if (food !== undefined && food !== null) parts.push(`Food/day: ${food}`)
-      return parts.join(' · ') || ''
+    normalizeEstimate(ci) {
+      if (!ci) return null
+      if (Array.isArray(ci)) {
+        const [flight, rooms, food] = ci
+        return {
+          flight: this.normalizeNumber(flight),
+          roomsPerNight: this.normalizeNumber(rooms),
+          foodDaily: this.normalizeNumber(food)
+        }
+      }
+      return {
+        flight: this.normalizeNumber(ci.flight ?? ci.flight_cost ?? ci.flightEstimate),
+        roomsPerNight: this.normalizeNumber(ci.roomsPerNight ?? ci.rooms_per_night ?? ci.room_nightly),
+        foodDaily: this.normalizeNumber(ci.foodDaily ?? ci.food_daily)
+      }
+    },
+    normalizeNumber(val) {
+      if (val === undefined || val === null || val === '') return null
+      const num = Number(val)
+      return Number.isFinite(num) ? num : null
+    },
+    formatCurrency(val) {
+      if (val === null) return '—'
+      try {
+        return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(val)
+      } catch (e) {
+        return String(val)
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 <template>
   <section>
     <h2>All Goals</h2>
-    <div class="goals-list">
+    <div v-if="plansList.length" class="goals-list">
       <TripNotification
         v-for="plan in plansList"
         :key="plan.id"
@@ -12,6 +12,7 @@
         style="cursor:pointer;"
       />
     </div>
+    <p v-else class="empty-state">All goals will appear after creating your first travel goal.</p>
     <button @click="goHome">Home</button>
   </section>
   
@@ -60,5 +61,10 @@ export default {
   flex-direction: column;
   align-items: stretch;
   margin-bottom: 2rem;
+}
+.empty-state {
+  margin: 2rem 0;
+  color: #666;
+  font-size: 1rem;
 }
 </style>

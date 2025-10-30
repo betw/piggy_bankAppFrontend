@@ -18,21 +18,33 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import { useTravelPlanStore } from '../stores/travelPlan'
 
 export default {
   components: { },
   setup() {
     const router = useRouter()
     const userStore = useUserStore()
+    const travelPlanStore = useTravelPlanStore()
 
     const isLoggedIn = computed(() => !!userStore.currentUser)
     const username = computed(() => userStore.currentUser?.username ?? 'user')
+    const latestPlanId = computed(() => {
+      if (!travelPlanStore.currentPlan?.id) {
+        const plans = Object.values(travelPlanStore.plans || {})
+        return plans.length ? plans[plans.length - 1].id : null
+      }
+      return travelPlanStore.currentPlan.id
+    })
 
     function go(view) {
       if (view === 'Home') router.push('/')
       else if (view === 'AllGoals') router.push('/goals')
       else if (view === 'Notifications') router.push('/notifications')
-      else if (view === 'GoalDetail') router.push('/goal/1') // Example: id=1
+      else if (view === 'GoalDetail') {
+        const id = latestPlanId.value
+        if (id) router.push(`/goal/${id}`)
+      }
       else if (view === 'Login') router.push('/login')
     }
     function onLogout() {
