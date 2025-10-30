@@ -1,13 +1,19 @@
 <template>
   <section>
     <h2>Notifications</h2>
-    <div v-if="notifications.length" class="notifications-list">
+    <div v-if="hasNotifications" class="notifications-list">
+      <HalfwayNotification
+        v-for="notif in milestoneNotifications"
+        :key="notif.id || `milestone-${notif.progress}`"
+        :notification="notif"
+        @view="goToGoalDetail"
+      />
       <TripNotification
-        v-for="(notif, idx) in notifications"
-        :key="idx"
-        :title="notif.title"
+        v-for="notif in otherNotifications"
+        :key="notif.id || `notification-${notif.progress || notif.message}`"
+        title="Notification"
         :message="notif.message"
-        @click="goToGoalDetail(notif.id)"
+        @click="goToGoalDetail(notif.progress)"
         style="cursor:pointer;"
       />
     </div>
@@ -17,23 +23,70 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TripNotification from '../components/TripNotification.vue'
+import HalfwayNotification from '../components/HalfwayNotification.vue'
+import { useNotificationStore } from '../stores/notification'
+import { useUserStore } from '../stores/user'
 
 export default {
   name: 'NotificationsView',
-  components: { TripNotification },
+  components: { TripNotification, HalfwayNotification },
   setup() {
     const router = useRouter()
+    const notificationStore = useNotificationStore()
+    const userStore = useUserStore()
+
+    const allNotifications = computed(() => notificationStore.notifications)
+    const milestoneNotifications = computed(() => notificationStore.milestoneNotifications)
+    const otherNotifications = computed(() =>
+      allNotifications.value.filter((item) => item?.message !== 'You are halfway there!')
+    )
+    const hasNotifications = computed(() => allNotifications.value.length > 0)
+
     function goHome() {
       router.push('/')
     }
-    const notifications = ref([])
+
     function goToGoalDetail(id) {
+      if (!id) return
       router.push(`/goal/${id}`)
     }
-    return { goHome, notifications, goToGoalDetail }
+
+    async function loadNotificationsForUser(user) {
+      if (!user) return
+      try {
+        await notificationStore.fetchNotifications(user)
+      } catch (err) {
+        console.error('[notifications view] failed to load notifications:', err)
+      }
+    }
+
+    onMounted(() => {
+      userStore.hydrate()
+      if (userStore.currentUser) {
+        loadNotificationsForUser(userStore.currentUser)
+      }
+    })
+
+    watch(
+      () => userStore.currentUser,
+      (user) => {
+        if (user) {
+          loadNotificationsForUser(user)
+        }
+      },
+      { immediate: false }
+    )
+
+    return {
+      milestoneNotifications,
+      otherNotifications,
+      hasNotifications,
+      goHome,
+      goToGoalDetail
+    }
   }
 }
 </script>

@@ -241,6 +241,27 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         throw err?.response?.data?.error || err.message || err
       }
   },
+    updateSavingsPlan(planId, savingsPlan) {
+      if (!planId) return null
+      const id = String(planId)
+      const existingPlan = this.plans[id]?.savingsPlan || {}
+      let mergedPlan = savingsPlan ? { ...existingPlan, ...savingsPlan } : null
+      if (mergedPlan && mergedPlan.planId != null) {
+        mergedPlan = { ...mergedPlan, planId: String(mergedPlan.planId) }
+      }
+      return this._mergePlanUpdate(id, {
+        savingsPlan: mergedPlan
+      })
+    },
+    updateSavingsProgress(planId, savingsProgress) {
+      if (!planId) return null
+      const id = String(planId)
+      const existingProgress = this.plans[id]?.savingsProgress || {}
+      const mergedProgress = savingsProgress ? { ...existingProgress, ...savingsProgress } : null
+      return this._mergePlanUpdate(id, {
+        savingsProgress: mergedProgress
+      })
+    },
     // store a fetched plan
     cachePlan(plan) {
       if (!plan) return
