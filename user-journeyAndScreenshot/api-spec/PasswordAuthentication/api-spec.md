@@ -104,3 +104,39 @@
 {
   "error": "string"
 }
+```
+
+---
+
+### POST /api/PasswordAuthentication/_getUserUsername
+
+**Description:** Retrieves the username associated with a specific user ID.
+
+**Requirements:**
+- user exists
+
+**Effects:**
+- Returns the username associated with the specified `user`.
+
+**Request Body:**
+```json
+{
+  "user": "User"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "username": "String"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```

@@ -1,6 +1,18 @@
 <template>
-  <div class="trip-notification" @click="$emit('click', $event)">
-    <h3>{{ title }}</h3>
+  <div class="trip-notification" @click="handleClick">
+    <div class="header">
+      <h3>{{ title }}</h3>
+      <button
+        v-if="showDelete"
+        type="button"
+        class="delete-button"
+        aria-label="Delete notification"
+        @click.stop="emitDelete"
+        @keydown.stop
+      >
+        Delete
+      </button>
+    </div>
     <p>{{ computedMessage }}</p>
 
     <!-- If a structured travelPlan object is provided, render a compact plan summary -->
@@ -61,9 +73,10 @@ export default {
     // optional extra details displayed under the message. Can be string or array of strings
     details: { type: [String, Array], default: '' },
     // optional structured travelPlan object; when present it takes precedence over `details`
-    travelPlan: { type: Object, default: null }
+    travelPlan: { type: Object, default: null },
+    showDelete: { type: Boolean, default: true }
   },
-  emits: ['click'],
+  emits: ['click', 'delete'],
   computed: {
     computedMessage() {
       if (this.message && String(this.message).trim().length) return this.message
@@ -102,6 +115,14 @@ export default {
     }
   },
   methods: {
+    handleClick(event) {
+      this.$emit('click', event)
+    },
+    emitDelete() {
+      if (this.showDelete) {
+        this.$emit('delete')
+      }
+    },
     formatDate(d) {
       if (!d) return '-'
       // Treat YYYY-MM-DD as a local date to avoid timezone-based day shifts
@@ -156,6 +177,13 @@ export default {
   margin-bottom: 1rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   position: relative;
+  cursor: pointer;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 h3 {
   margin: 0 0 0.5rem 0;
@@ -196,4 +224,24 @@ p {
 .plan-meta { margin-top: 0.5rem; display:flex; gap:2rem; align-items:flex-start }
 .meta-title { font-weight:600; color:#8a5d00; margin-bottom:0.2rem }
 .meta-row { color:#555; font-size:0.95rem }
+.delete-button {
+  background: transparent;
+  border: none;
+  color: #ad8b00;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.delete-button:hover,
+.delete-button:focus-visible {
+  background: rgba(255, 0, 0, 0.08);
+  color: #c43820;
+  outline: none;
+}
+.delete-button:active {
+  background: rgba(255, 0, 0, 0.16);
+}
 </style>

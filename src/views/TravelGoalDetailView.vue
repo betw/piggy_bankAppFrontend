@@ -6,6 +6,7 @@
         :message="message"
         :details="details"
         :travelPlan="planForDisplay"
+        @delete="onDelete"
       >
         <TravelProgressInfo
           :progress="progress"
@@ -28,7 +29,6 @@
       @estimate="onEstimate"
       @manual="openManualCost"
       @necessity="openNecessityForm"
-      @delete="onDelete"
       @home="goHome"
     />
     <ManualCostForm
@@ -364,8 +364,8 @@ export default {
       userId,
       activePlanId,
       totalCostDisplay,
-  planSavingsPlan,
-      progress
+      planSavingsPlan,
+      planSavingsProgress
     }
   }
 }

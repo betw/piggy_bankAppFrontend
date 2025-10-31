@@ -9,7 +9,6 @@
     <button @click="$emit('necessity')" :disabled="necessityDisabled">
       Update Necessities
     </button>
-    <button @click="$emit('delete')">Delete</button>
     <button @click="$emit('home')">Home</button>
     <p v-if="statusMessage" class="status-message">{{ statusMessage }}</p>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>

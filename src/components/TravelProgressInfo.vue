@@ -32,7 +32,7 @@
         </button>
       </div>
       <div v-if="planSummary" class="plan-created-banner">
-        <p class="plan-created-title">Plan created</p>
+        <p class="plan-created-title">Plan</p>
         <p class="plan-created-details">
           <span>Payment Period: {{ planSummary.paymentPeriod }}</span>
           <span>Amount Per Period: {{ formatCurrency(planSummary.amountPerPeriod) }}</span>
@@ -64,7 +64,8 @@
       <transition name="collapse">
         <div v-show="formOpen" class="plan-body">
           <p class="warning" v-if="totalMismatch">manually enter the total cost then create a plan</p>
-          <p class="hint" v-else-if="!canSubmit">Connect a travel goal and fill all fields to create a plan.</p>
+          <p class="hint" v-else-if="!hasResolvedTotalCost">Estimate or enter your trip cost before creating a savings plan.</p>
+          <p class="hint" v-else-if="!formFieldsReady">Connect a travel goal and fill all fields to create a plan.</p>
           <form @submit.prevent="createPlan">
             <div class="form-grid">
               <label>
@@ -136,8 +137,24 @@ const clampedProgress = computed(() => Math.min(100, Math.max(0, Math.round(prog
 
 const displayCurrentAmount = computed(() => currentAmountValue.value)
 
+const hasResolvedTotalCost = computed(() => {
+  if (props.totalCost === null || props.totalCost === undefined || props.totalCost === '') return false
+  const numericTotal = Number(props.totalCost)
+  return Number.isFinite(numericTotal) && numericTotal > 0
+})
+
+const formFieldsReady = computed(() => {
+  return form.paymentPeriod !== '' && form.amountPerPeriod !== '' && form.goalAmount !== ''
+})
+
 const canSubmit = computed(() => {
-  return props.userId && props.travelPlanId && form.paymentPeriod !== '' && form.amountPerPeriod !== '' && form.goalAmount !== '' && !totalMismatch.value
+  return (
+    props.userId &&
+    props.travelPlanId &&
+    hasResolvedTotalCost.value &&
+    formFieldsReady.value &&
+    !totalMismatch.value
+  )
 })
 
 const hasProgress = computed(() => {
@@ -170,7 +187,9 @@ function formatCurrency(amount) {
 async function createPlan() {
   error.value = ''
   if (!canSubmit.value) {
-    error.value = 'Provide user, travel goal, and plan details before submitting.'
+    error.value = hasResolvedTotalCost.value
+      ? 'Provide user, travel goal, and plan details before submitting.'
+      : 'Estimate or enter your trip cost before creating a savings plan.'
     return
   }
 
@@ -194,6 +213,24 @@ async function createPlan() {
     submitting.value = true
     const res = await api.post('ProgressTracking/createPlan', payload)
     if (res.data?.error) throw new Error(res.data.error)
+    const progressIdCandidate =
+      res.data?.planId ??
+      res.data?.planID ??
+      res.data?.plan_id ??
+      res.data?.progressTrackingId ??
+      res.data?.progressTrackingID ??
+      res.data?.progress_tracking_id ??
+      res.data?.plan?.id ??
+      res.data?.plan?.planId ??
+      res.data?.plan?.planID ??
+      res.data?.plan?.progressTrackingId ??
+      res.data?.plan?.progressTrackingID ??
+      res.data?.plan?.progress_tracking_id ??
+      null
+    const normalizedProgressId =
+      progressIdCandidate !== null && progressIdCandidate !== undefined
+        ? String(progressIdCandidate)
+        : null
     const summary = {
       paymentPeriod: res.data?.paymentPeriod ?? payload.paymentPeriod,
       amountPerPeriod: res.data?.amountPerPeriod ?? payload.amountPerPeriod,
@@ -218,11 +255,17 @@ async function createPlan() {
         paymentPeriod: summary.paymentPeriod,
         amountPerPeriod: summary.amountPerPeriod,
         goalAmount: Number.isFinite(numericGoal) ? numericGoal : null,
-        currentAmount: 0
+        currentAmount: 0,
+        planId: normalizedProgressId,
+        progressTrackingId: normalizedProgressId,
+        id: normalizedProgressId
       })
       travelPlanStore.updateSavingsProgress(props.travelPlanId, {
         manualContribution: 0,
-        basePercent: 0
+        basePercent: 0,
+        progressTrackingId: normalizedProgressId,
+        planId: normalizedProgressId,
+        id: normalizedProgressId
       })
     }
     formOpen.value = false

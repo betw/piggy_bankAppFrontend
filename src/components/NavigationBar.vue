@@ -7,7 +7,7 @@
   <button @click="go('GoalDetail')">Travel Goal</button>
     </div>
     <div class="nav-right" v-if="isLoggedIn">
-      <span class="who">Hello {{ username }}</span>
+      <span v-if="username" class="who">{{ username }}</span>
       <button @click="onLogout">Logout</button>
     </div>
   <!-- debug output removed -->
@@ -27,8 +27,8 @@ export default {
     const userStore = useUserStore()
     const travelPlanStore = useTravelPlanStore()
 
-    const isLoggedIn = computed(() => !!userStore.currentUser)
-    const username = computed(() => userStore.currentUser?.username ?? 'user')
+  const isLoggedIn = computed(() => !!userStore.currentUser)
+  const username = computed(() => userStore.username || '')
     const latestPlanId = computed(() => {
       if (!travelPlanStore.currentPlan?.id) {
         const plans = Object.values(travelPlanStore.plans || {})

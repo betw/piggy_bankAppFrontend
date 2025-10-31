@@ -8,6 +8,7 @@
         title="Travel Goal"
         :message="''"
         :travelPlan="plan"
+        :show-delete="false"
         @click="goToGoalDetail(plan.id)"
         style="cursor:pointer;"
       />

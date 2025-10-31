@@ -6,7 +6,8 @@ const STORAGE_KEY = 'pb_user'
 export const useUserStore = defineStore('user', {
   state: () => ({
     currentUser: null,
-    token: null
+    token: null,
+    username: ''
   }),
   actions: {
     hydrate() {
@@ -16,10 +17,66 @@ export const useUserStore = defineStore('user', {
         const data = JSON.parse(raw)
         this.currentUser = data.user ?? data.currentUser ?? null
         this.token = data.token ?? null
+        this.username = data.username ?? ''
       } catch (e) {
         // if parsing fails, clear bad data
         localStorage.removeItem(STORAGE_KEY)
+        this.username = ''
+        return
       }
+      if (this.currentUser && !this.username) {
+        this.refreshUsername().catch(() => {})
+      }
+    },
+    _persistState() {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ user: this.currentUser, token: this.token, username: this.username })
+        )
+      } catch {}
+    },
+    async refreshUsername() {
+      if (!this.currentUser) {
+        this.username = ''
+        this._persistState()
+        return ''
+      }
+
+      let identifier = null
+      const user = this.currentUser
+      if (typeof user === 'string' || typeof user === 'number') {
+        identifier = user
+      } else if (user && typeof user === 'object') {
+        identifier =
+          user.id ??
+          user.userId ??
+          user.userID ??
+          user.user ??
+          user.username ??
+          null
+      }
+
+      const payload = { user: identifier ?? user }
+
+      try {
+        const res = await api.post('/PasswordAuthentication/_getUserUsername', payload)
+        const data = res?.data
+        let resolved = ''
+        if (Array.isArray(data)) {
+          resolved = data[0]?.username ?? ''
+        } else if (data && typeof data === 'object') {
+          resolved = data.username ?? data.user?.username ?? ''
+        } else if (typeof data === 'string') {
+          resolved = data
+        }
+        this.username = resolved || ''
+      } catch (err) {
+        console.error('[user] refreshUsername failed:', err)
+      }
+
+      this._persistState()
+      return this.username
     },
     async login(username, password) {
       try {
@@ -29,10 +86,12 @@ export const useUserStore = defineStore('user', {
           throw res.data.error
         }
         this.currentUser = res.data?.user ?? res.data ?? null
+        this.username = username
         // persist minimal user payload; include token if backend returns it
         const token = res.data?.token ?? null
         this.token = token
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: this.currentUser, token })) } catch {}
+        await this.refreshUsername()
+        this._persistState()
         return this.currentUser
       } catch (err) {
         // rethrow to let UI handle error message
@@ -43,9 +102,11 @@ export const useUserStore = defineStore('user', {
       try {
         const res = await api.post('/PasswordAuthentication/register', { username, password })
         this.currentUser = res.data?.user ?? null
+        this.username = username
         const token = res.data?.token ?? null
         this.token = token
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: this.currentUser, token })) } catch {}
+        await this.refreshUsername()
+        this._persistState()
         return this.currentUser
       } catch (err) {
         throw err?.response?.data?.error || err.message || err
@@ -54,6 +115,7 @@ export const useUserStore = defineStore('user', {
     logout() {
       this.currentUser = null
       this.token = null
+      this.username = ''
       try { localStorage.removeItem(STORAGE_KEY) } catch {}
     }
   }

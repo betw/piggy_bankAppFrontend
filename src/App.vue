@@ -14,10 +14,11 @@
 </template>
 
 <script>
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import NavigationBar from './components/NavigationBar.vue'
 import { useUserStore } from './stores/user'
 import { useTravelPlanStore } from './stores/travelPlan'
+import { useNotificationStore } from './stores/notification'
 
 export default {
   name: 'App',
@@ -25,10 +26,23 @@ export default {
   setup() {
     const userStore = useUserStore()
     const travelPlanStore = useTravelPlanStore()
+    const notificationStore = useNotificationStore()
     onMounted(() => {
       userStore.hydrate()
       travelPlanStore.hydrate()
+      if (typeof notificationStore.hydrate === 'function') {
+        notificationStore.hydrate()
+      }
     })
+    watch(
+      () => userStore.currentUser,
+      () => {
+        travelPlanStore.hydrate()
+        if (typeof notificationStore.hydrate === 'function') {
+          notificationStore.hydrate()
+        }
+      }
+    )
     return {}
   }
 }

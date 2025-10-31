@@ -108,3 +108,36 @@
 ```
 
 ---
+
+### POST /api/Notification/getNotificationMessageAndFreq
+
+**Description:** Retrieves the message and frequency for a notification belonging to the specified user.
+
+**Requirements:**
+- notification exists and belongs to user
+
+**Effects:**
+- returns the message and frequency of the specified notification
+
+**Request Body:**
+```json
+{
+  "user": "User",
+  "notification": "Notification"
+}
+```
+
+**Success Response Body (Query):**
+```json
+{
+  "message": "String",
+  "frequency": "Number"
+}
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```

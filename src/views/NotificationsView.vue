@@ -6,14 +6,19 @@
         v-for="notif in milestoneNotifications"
         :key="notif.id || `milestone-${notif.progress}`"
         :notification="notif"
+        :travel-plan="planForNotification(notif.planId || notif.progress || notif.id)"
         @view="goToGoalDetail"
+        @delete="removeNotification(notif)"
       />
       <TripNotification
         v-for="notif in otherNotifications"
         :key="notif.id || `notification-${notif.progress || notif.message}`"
         title="Notification"
         :message="notif.message"
-        @click="goToGoalDetail(notif.progress)"
+        :details="frequencyLabel(notif)"
+        :travel-plan="planForNotification(notif.planId || notif.progress || notif.id)"
+        @click="navigateToNotification(notif)"
+        @delete="removeNotification(notif)"
         style="cursor:pointer;"
       />
     </div>
@@ -24,11 +29,13 @@
 
 <script>
 import { computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import TripNotification from '../components/TripNotification.vue'
 import HalfwayNotification from '../components/HalfwayNotification.vue'
 import { useNotificationStore } from '../stores/notification'
 import { useUserStore } from '../stores/user'
+import { useTravelPlanStore } from '../stores/travelPlan'
 
 export default {
   name: 'NotificationsView',
@@ -36,22 +43,231 @@ export default {
   setup() {
     const router = useRouter()
     const notificationStore = useNotificationStore()
+    const travelPlanStore = useTravelPlanStore()
+    const { notifications, milestoneNotifications: milestoneGetter } = storeToRefs(notificationStore)
     const userStore = useUserStore()
 
-    const allNotifications = computed(() => notificationStore.notifications)
-    const milestoneNotifications = computed(() => notificationStore.milestoneNotifications)
+    const allNotifications = notifications
+    const milestoneNotifications = milestoneGetter
+
+    function isMilestoneNotification(item) {
+      if (!item) return false
+      const msg = item?.message
+      if (!msg) return false
+      const normalized = String(msg).trim().toLowerCase()
+      if (normalized.includes('halfway')) return true
+      if (normalized.includes('goal')) {
+        return normalized.includes('complete') || normalized.includes('completion')
+      }
+      return false
+    }
+
     const otherNotifications = computed(() =>
-      allNotifications.value.filter((item) => item?.message !== 'You are halfway there!')
+      allNotifications.value.filter((item) => !isMilestoneNotification(item))
     )
     const hasNotifications = computed(() => allNotifications.value.length > 0)
+
+    function normalizeId(value) {
+      if (value === undefined || value === null) return null
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed.length ? trimmed : null
+      }
+      if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+      return null
+    }
+
+    function collectPlanIdentifiers(plan) {
+      if (!plan || typeof plan !== 'object') return []
+      const candidates = [
+        plan.id,
+        plan.travelPlanID,
+        plan.travelPlanId,
+        plan.travel_plan_id,
+        plan.progressTrackingId,
+        plan.progressTrackingID,
+        plan.progress_tracking_id,
+        plan.progressId,
+        plan.progressID,
+        plan.progress,
+        plan.halfwayNotificationId,
+        plan.goalNotificationId
+      ]
+      return candidates
+        .map((candidate) => normalizeId(candidate))
+        .filter((value, index, arr) => value && arr.indexOf(value) === index)
+    }
+
+    const plansById = computed(() => {
+      const map = new Map()
+      const plans = travelPlanStore.plans || {}
+      Object.values(plans).forEach((plan) => {
+        collectPlanIdentifiers(plan).forEach((id) => {
+          if (id && !map.has(id)) {
+            map.set(id, plan)
+          }
+        })
+      })
+      const current = travelPlanStore.currentPlan
+      if (current) {
+        collectPlanIdentifiers(current).forEach((id) => {
+          if (id && !map.has(id)) {
+            map.set(id, current)
+          }
+        })
+      }
+      return map
+    })
+
+    function planForNotification(progressId) {
+      const normalized = normalizeId(progressId)
+      if (!normalized) return null
+      const map = plansById.value
+      return map.get(normalized) ?? null
+    }
+
+    watch(
+      allNotifications,
+      (current) => {
+        const snapshot = Array.isArray(current)
+          ? current.map((item) => ({ id: item?.id, message: item?.message, progress: item?.progress }))
+          : current
+        console.log('[notifications view] store notifications', snapshot)
+      },
+      { immediate: true, deep: true }
+    )
+
+    watch(
+      milestoneNotifications,
+      (current) => {
+        const snapshot = Array.isArray(current)
+          ? current.map((item) => ({ id: item?.id, message: item?.message, progress: item?.progress }))
+          : current
+        console.log('[notifications view] milestone notifications', snapshot)
+      },
+      { immediate: true, deep: true }
+    )
 
     function goHome() {
       router.push('/')
     }
 
     function goToGoalDetail(id) {
-      if (!id) return
-      router.push(`/goal/${id}`)
+      const planId = normalizeId(id)
+      console.log('[notifications view] goToGoalDetail invoked', { id, planId })
+      if (!planId) return
+      const plan = planForNotification(planId) || travelPlanStore.plans?.[planId]
+      if (!plan) {
+        const loader = travelPlanStore.fetchTravelPlan?.(planId)
+        if (loader && typeof loader.then === 'function') {
+          loader.catch(() => {})
+        }
+      }
+      const planToCache = plan ?? planForNotification(planId)
+      if (planToCache && typeof travelPlanStore.cachePlan === 'function') {
+        travelPlanStore.cachePlan(planToCache)
+        if (typeof travelPlanStore.setCurrentPlan === 'function') {
+          travelPlanStore.setCurrentPlan(planToCache)
+        }
+      } else if (typeof travelPlanStore.setCurrentPlan === 'function') {
+        travelPlanStore.setCurrentPlan({ id: planId, progressTrackingId: planId })
+      }
+      const routeId = planToCache ? normalizeId(firstPlanIdentifier(planToCache)) ?? planId : planId
+    console.log('[notifications view] navigating to goal', { planId: routeId, original: planId })
+    router.push(`/goal/${routeId}`)
+    }
+
+    function firstPlanIdentifier(plan) {
+      const ids = collectPlanIdentifiers(plan)
+      return ids.length ? ids[0] : null
+    }
+
+    function findPlanOrNotification(notif) {
+      if (!notif) return null
+      const progressId = normalizeId(notif.progress)
+      console.log('[notifications view] resolve notification', {
+        notifId: notif.id,
+        planId: notif.planId,
+        progress: notif.progress,
+        progressId
+      })
+      if (progressId) {
+        const plan = planForNotification(progressId)
+        if (plan) return { plan, id: progressId }
+      }
+      if (notif.planId) {
+        const candidateId = normalizeId(notif.planId)
+        const plan = candidateId ? planForNotification(candidateId) : null
+        if (candidateId) {
+          return { plan, id: candidateId }
+        }
+      }
+      if (notif.id) {
+        const notifId = normalizeId(notif.id)
+        const plan = notifId ? planForNotification(notifId) : null
+        if (notifId) {
+          return { plan, id: notifId }
+        }
+      }
+      return {
+        plan: progressId ? planForNotification(progressId) : null,
+        id: progressId ?? normalizeId(notif.id ?? notif.planId ?? null)
+      }
+    }
+
+    function navigateToNotification(notif) {
+      if (!notif) return
+      const lookup = findPlanOrNotification(notif)
+      console.log('[notifications view] navigateToNotification', { notif, lookup })
+      if (lookup?.plan && notif?.id && typeof notificationStore.setNotificationMeta === 'function') {
+        const canonicalId =
+          firstPlanIdentifier(lookup.plan) ?? lookup.id ?? notif.planId ?? notif.progress ?? notif.id ?? null
+        notificationStore.setNotificationMeta(notif.id, {
+          planId: canonicalId ?? null,
+          progress: lookup.id ?? notif.progress ?? null
+        })
+      }
+      const target = lookup?.plan
+        ? firstPlanIdentifier(lookup.plan) ?? lookup.id ?? notif.planId ?? notif.progress ?? notif.id
+        : lookup?.id ?? notif.planId ?? notif.progress ?? notif.id
+      goToGoalDetail(target)
+    }
+
+    async function removeNotification(notif) {
+      if (!notif) return
+      const notificationId = normalizeId(notif.id ?? null)
+      if (!notificationId) return
+      let user = userStore.currentUser
+      if (!user) {
+        try {
+          if (typeof userStore.hydrate === 'function') {
+            const maybePromise = userStore.hydrate()
+            if (maybePromise && typeof maybePromise.then === 'function') {
+              await maybePromise.catch((err) => {
+                console.error('[notifications view] hydrate user failed:', err)
+              })
+            }
+          }
+        } catch (err) {
+          console.error('[notifications view] failed to hydrate user before delete:', err)
+        }
+        user = userStore.currentUser
+      }
+      if (!user) {
+        console.warn('[notifications view] deleteNotification skipped: missing user context')
+        return
+      }
+      try {
+        await notificationStore.deleteNotification(notificationId, user)
+      } catch (err) {
+        console.error('[notifications view] failed to delete notification:', err)
+      }
+    }
+
+    function frequencyLabel(notif) {
+      const value = Number(notif?.frequency)
+      if (!Number.isFinite(value) || value <= 0) return ''
+      return value === 1 ? 'Every month' : `Every ${value} months`
     }
 
     async function loadNotificationsForUser(user) {
@@ -64,6 +280,12 @@ export default {
     }
 
     onMounted(() => {
+      if (typeof travelPlanStore.hydrate === 'function') {
+        travelPlanStore.hydrate()
+      }
+      if (typeof notificationStore.hydrate === 'function') {
+        notificationStore.hydrate()
+      }
       userStore.hydrate()
       if (userStore.currentUser) {
         loadNotificationsForUser(userStore.currentUser)
@@ -74,6 +296,9 @@ export default {
       () => userStore.currentUser,
       (user) => {
         if (user) {
+          if (typeof notificationStore.hydrate === 'function') {
+            notificationStore.hydrate()
+          }
           loadNotificationsForUser(user)
         }
       },
@@ -85,7 +310,11 @@ export default {
       otherNotifications,
       hasNotifications,
       goHome,
-      goToGoalDetail
+      goToGoalDetail,
+      planForNotification,
+      navigateToNotification,
+      removeNotification,
+      frequencyLabel
     }
   }
 }
@@ -95,6 +324,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  gap: 1.25rem;
   margin-bottom: 2rem;
 }
 .empty-state {
