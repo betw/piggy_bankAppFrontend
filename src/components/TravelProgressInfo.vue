@@ -14,13 +14,13 @@
         <div class="progress-meter">
           <div class="progress-header">
             <div class="progress-label">Progress</div>
-            <div v-if="goalTarget != null" class="goal-target">Goal: {{ formatCurrency(goalTarget) }}</div>
+            <div v-if="goalTarget != null" class="goal-target">Goal: <span class="money">{{ formatCurrency(goalTarget) }}</span></div>
           </div>
           <div class="progress-bar">
             <div class="progress-fill" :style="{ width: clampedProgress + '%' }"></div>
           </div>
           <div class="progress-value">{{ clampedProgress }}%</div>
-          <div v-if="goalTarget !== null" class="current-amount">Current Amount: {{ formatCurrency(displayCurrentAmount) }}</div>
+          <div v-if="goalTarget !== null" class="current-amount">Current Amount: <span class="money">{{ formatCurrency(displayCurrentAmount) }}</span></div>
         </div>
         <button
           type="button"
@@ -35,7 +35,7 @@
         <p class="plan-created-title">Plan</p>
         <p class="plan-created-details">
           <span>Payment Period: {{ planSummary.paymentPeriod }}</span>
-          <span>Amount Per Period: {{ formatCurrency(planSummary.amountPerPeriod) }}</span>
+          <span>Amount Per Period: <span class="money">{{ formatCurrency(planSummary.amountPerPeriod) }}</span></span>
         </p>
       </div>
       <div v-if="adjusting" class="adjust-card">
@@ -494,9 +494,9 @@ function applyAdjustment() {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid #ffe58f;
-  background: #fff3bf;
-  color: #8a5d00;
+  border: 1px solid var(--ink-300);
+  background: #fff;
+  color: var(--ink-900);
   font-size: 1.4rem;
   line-height: 1;
   display: flex;
@@ -513,25 +513,25 @@ function applyAdjustment() {
   border-color: #e0e0e0;
 }
 .adjust-btn:hover {
-  background: #ffd666;
+  background: var(--surface-1);
 }
 .adjust-btn:active {
   transform: scale(0.95);
 }
 .adjust-btn:focus-visible {
-  outline: 2px solid #ffd666;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 .progress-meter {
-  background: #fffbe6;
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 0.8rem 1.4rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0.5rem;
-  border: 1px solid #ffe58f;
+  border: 1px solid var(--card-border);
   min-width: 240px;
 }
 .progress-header {
@@ -540,27 +540,23 @@ function applyAdjustment() {
   justify-content: space-between;
   gap: 1rem;
 }
-.progress-label {
-  font-size: 1rem;
-  color: #ad8b00;
-  font-weight: 500;
-}
+.progress-label { font-size: 1rem; color: var(--ink-900); font-weight: 600; }
 .goal-target {
   font-size: 0.95rem;
-  color: #8a5d00;
+  color: var(--ink-700);
   font-weight: 500;
 }
 .progress-bar {
   width: 200px;
   height: 12px;
-  background: #ffe58f;
+  background: rgba(0, 200, 5, 0.18);
   border-radius: 6px;
   overflow: hidden;
   margin: 0 0.7rem;
 }
 .progress-fill {
   height: 100%;
-  background: #ad8b00;
+  background: var(--green-500);
   border-radius: 6px;
   transition: width 0.3s;
 }
@@ -573,24 +569,25 @@ function applyAdjustment() {
 .current-amount {
   margin-top: 0.25rem;
   text-align: center;
-  color: #8a5d00;
+  color: var(--ink-700);
   font-size: 0.95rem;
   font-weight: 500;
 }
+.money { color: var(--green-600); font-weight: 700; }
 .plan-created-banner {
-  background: rgba(255, 245, 200, 0.6);
-  border: 1px dashed #ffe58f;
+  background: var(--surface-1);
+  border: 1px dashed var(--card-border);
   border-radius: 10px;
   padding: 0.8rem 1.2rem;
   text-align: center;
   max-width: 320px;
   width: 100%;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 .plan-created-title {
   margin: 0;
   font-weight: 600;
-  color: #8a5d00;
+  color: var(--ink-900);
   font-size: 1rem;
 }
 .plan-created-details {
@@ -604,16 +601,16 @@ function applyAdjustment() {
 .adjust-card {
   width: 100%;
   max-width: 320px;
-  background: #fffefd;
-  border: 1px solid #ffe58f;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 0.9rem 1rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  box-shadow: var(--shadow-sm);
 }
 .adjust-card h5 {
   margin: 0 0 0.6rem;
   font-size: 1rem;
-  color: #8a5d00;
+  color: var(--ink-900);
 }
 .adjust-card label {
   display: flex;
@@ -635,37 +632,39 @@ function applyAdjustment() {
 .adjust-actions button {
   padding: 0.5rem 1.2rem;
   border-radius: 4px;
-  border: none;
+  border: 1px solid var(--ink-300);
   cursor: pointer;
   font-size: 0.95rem;
   transition: background 0.2s;
 }
 .adjust-actions button[type="submit"] {
-  background: #ffe58f;
-  color: #333;
+  background: var(--green-500);
+  color: #fff;
+  border-color: var(--green-600);
 }
 .adjust-actions button[type="submit"]:hover {
-  background: #ffd666;
+  background: var(--green-400);
 }
 .adjust-actions .secondary {
-  background: #f0f0f0;
-  color: #555;
+  background: #fff;
+  color: var(--ink-900);
+  border-color: var(--ink-300);
 }
 .adjust-actions .secondary:hover {
-  background: #e0e0e0;
+  background: var(--surface-1);
 }
 .adjust-notice {
   margin: 0.4rem 0 0;
-  color: #8a5d00;
+  color: var(--ink-700);
   font-size: 0.95rem;
   text-align: center;
 }
 .plan-card {
-  background: #fffefd;
-  border: 1px solid #ffe58f;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  box-shadow: var(--shadow-sm);
 }
 .plan-toggle {
   width: 100%;
@@ -676,13 +675,13 @@ function applyAdjustment() {
   border: none;
   font-size: 1.05rem;
   font-weight: 600;
-  color: #8a5d00;
+  color: var(--ink-900);
   cursor: pointer;
   padding: 0;
 }
 .plan-toggle:focus-visible {
-  outline: 2px solid #ffd666;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 .plan-body {
   margin-top: 1rem;
@@ -694,7 +693,7 @@ function applyAdjustment() {
 }
 .warning {
   margin: 0 0 1rem;
-  color: #b26b00;
+  color: #8a5d00;
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -720,10 +719,10 @@ function applyAdjustment() {
 }
 .actions button {
   padding: 0.6rem 1.4rem;
-  border: none;
-  border-radius: 4px;
-  background: #ffe58f;
-  color: #333;
+  border: 1px solid var(--green-600);
+  border-radius: 6px;
+  background: var(--green-500);
+  color: #fff;
   font-size: 1rem;
   cursor: pointer;
   transition: background 0.2s;
@@ -733,7 +732,7 @@ function applyAdjustment() {
   cursor: not-allowed;
 }
 .actions button:not(:disabled):hover {
-  background: #ffd666;
+  background: var(--green-400);
 }
 .error {
   margin-top: 0.75rem;

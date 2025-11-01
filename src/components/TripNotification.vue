@@ -1,5 +1,13 @@
 <template>
-  <div class="trip-notification" @click="handleClick">
+  <div
+    class="trip-notification"
+    :class="[variantClass, clickable ? 'is-clickable' : '']"
+    @click="handleClick"
+    :role="clickable ? 'button' : undefined"
+    :tabindex="clickable ? 0 : undefined"
+    @keydown.enter.prevent="clickable ? handleClick($event) : null"
+    @keydown.space.prevent="clickable ? handleClick($event) : null"
+  >
     <div class="header">
       <h3>{{ title }}</h3>
       <button
@@ -16,7 +24,7 @@
     <p>{{ computedMessage }}</p>
 
     <!-- If a structured travelPlan object is provided, render a compact plan summary -->
-    <div v-if="travelPlan" class="plan-summary">
+  <div v-if="travelPlan && showPlanSummary" class="plan-summary">
       <div class="plan-top">
         <div class="plan-cities">
           <div class="from">From: <strong>{{ travelPlan.fromCity || '-' }}</strong></div>
@@ -26,7 +34,6 @@
       </div>
 
       <div class="plan-meta">
-        <div class="meta-row" v-if="travelPlan.id !== undefined && travelPlan.id !== null">Plan ID: <strong>{{ travelPlan.id }}</strong></div>
         <div class="necessity" v-if="travelPlan.necessity">
           <div class="meta-title">Necessity</div>
           <div class="meta-row" v-if="travelPlan.necessity.accommodation !== undefined">Accommodation: {{ travelPlan.necessity.accommodation }}</div>
@@ -35,16 +42,13 @@
         <div class="costs" v-if="hasCostData">
           <div class="meta-title">Cost</div>
           <div class="meta-row" v-if="costEstimate.flight !== null">
-            Flight: <strong>{{ formatCurrency(costEstimate.flight) }}</strong>
+            Flight: <strong class="money">{{ formatCurrency(costEstimate.flight) }}</strong>
           </div>
           <div class="meta-row" v-if="costEstimate.roomsPerNight !== null">
-            Room/night: <strong>{{ formatCurrency(costEstimate.roomsPerNight) }}</strong>
+            Room/night: <strong class="money">{{ formatCurrency(costEstimate.roomsPerNight) }}</strong>
           </div>
           <div class="meta-row" v-if="costEstimate.foodDaily !== null">
-            Food/day: <strong>{{ formatCurrency(costEstimate.foodDaily) }}</strong>
-          </div>
-          <div class="meta-row" v-if="normalizedTotalCost !== null">
-            Total: <strong>{{ formatCurrency(normalizedTotalCost) }}</strong>
+            Food/day: <strong class="money">{{ formatCurrency(costEstimate.foodDaily) }}</strong>
           </div>
         </div>
       </div>
@@ -74,15 +78,25 @@ export default {
     details: { type: [String, Array], default: '' },
     // optional structured travelPlan object; when present it takes precedence over `details`
     travelPlan: { type: Object, default: null },
-    showDelete: { type: Boolean, default: true }
+    showDelete: { type: Boolean, default: true },
+    // show or hide the gray plan summary box while keeping data available
+    showPlanSummary: { type: Boolean, default: true },
+    // indicates the card is interactive/clickable (used for hover/focus styles)
+    clickable: { type: Boolean, default: false },
+    // visual variant: 'default' (neutral/green) | 'attn' (pink for Notifications)
+    variant: { type: String, default: 'default' }
   },
   emits: ['click', 'delete'],
   computed: {
+    variantClass() {
+      return this.variant === 'attn' ? 'is-attn' : 'is-default'
+    },
     computedMessage() {
       if (this.message && String(this.message).trim().length) return this.message
       if (!this.travelPlan) return ''
       const parts = []
       if (this.travelPlan.fromCity) parts.push(`From: ${this.travelPlan.fromCity}`)
+      if (this.travelPlan.toCity) parts.push(`To: ${this.travelPlan.toCity}`)
       if (this.travelPlan.fromDate) parts.push(`Depart: ${this.formatDate(this.travelPlan.fromDate)}`)
       if (this.travelPlan.toDate) parts.push(`Return: ${this.formatDate(this.travelPlan.toDate)}`)
       return parts.join(' · ')
@@ -109,8 +123,7 @@ export default {
       return (
         this.costEstimate.flight !== null ||
         this.costEstimate.roomsPerNight !== null ||
-        this.costEstimate.foodDaily !== null ||
-        this.normalizedTotalCost !== null
+        this.costEstimate.foodDaily !== null
       )
     }
   },
@@ -170,15 +183,24 @@ export default {
 
 <style scoped>
 .trip-notification {
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
-  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
   padding: 1rem;
   margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: var(--shadow-sm);
   position: relative;
-  cursor: pointer;
+  cursor: default;
 }
+.trip-notification.is-attn {
+  background: var(--attn-bg);
+  border-color: var(--attn-border);
+}
+/* clickable state feedback */
+.trip-notification.is-clickable { cursor: pointer; transition: box-shadow .15s ease, transform .12s ease, border-color .15s ease; }
+.trip-notification.is-clickable:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--green-400); }
+.trip-notification.is-clickable:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.trip-notification.is-clickable:focus-visible { outline: none; box-shadow: var(--ring); }
 .header {
   display: flex;
   align-items: center;
@@ -188,8 +210,9 @@ export default {
 h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1.1rem;
-  color: #ad8b00;
+  color: var(--ink-900);
 }
+.trip-notification.is-attn h3 { color: var(--attn-title); }
 p {
   margin: 0;
   color: #333;
@@ -208,9 +231,13 @@ p {
 .plan-summary {
   margin-top: 0.6rem;
   padding: 0.6rem 0.8rem;
-  background: rgba(255,250,230,0.6);
+  background: var(--surface-1);
   border-radius: 6px;
-  border: 1px dashed rgba(255,229,143,0.6);
+  border: 1px dashed rgba(203, 213, 225, 0.8);
+}
+.trip-notification.is-attn .plan-summary {
+  background: rgba(255, 219, 235, 0.35);
+  border-color: rgba(255, 211, 227, 0.6);
 }
 .plan-top {
   display: flex;
@@ -222,13 +249,16 @@ p {
 .plan-cities .from, .plan-cities .to { color: #555 }
 .plan-dates { color: #777; font-size: 0.95rem }
 .plan-meta { margin-top: 0.5rem; display:flex; gap:2rem; align-items:flex-start }
-.meta-title { font-weight:600; color:#8a5d00; margin-bottom:0.2rem }
+.meta-title { font-weight:600; color: var(--ink-700); margin-bottom:0.2rem }
+.trip-notification.is-attn .meta-title { color: var(--attn-title); }
 .meta-row { color:#555; font-size:0.95rem }
+.money { color: var(--green-600); }
+.trip-notification.is-attn .money { color: inherit; }
 .delete-button {
   background: transparent;
   border: none;
-  color: #ad8b00;
-  font-weight: 600;
+  color: #b91c1c; /* red */
+  font-weight: 700;
   font-size: 0.95rem;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
@@ -237,11 +267,11 @@ p {
 }
 .delete-button:hover,
 .delete-button:focus-visible {
-  background: rgba(255, 0, 0, 0.08);
-  color: #c43820;
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
   outline: none;
 }
 .delete-button:active {
-  background: rgba(255, 0, 0, 0.16);
+  background: rgba(185, 28, 28, 0.2);
 }
 </style>

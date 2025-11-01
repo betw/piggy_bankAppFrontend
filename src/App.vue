@@ -1,16 +1,18 @@
 <template>
   <div id="app">
-    <header>
-      <h1>Piggy Bank — Trip Savings</h1>
+    <header class="app-header">
+  <h1 class="brand-title">Piggy Bank <img class="brand-icon" :src="pigIcon" alt="" /></h1>
     </header>
 
-          <NavigationBar />
+    <NavigationBar />
 
     <main>
-            <router-view />
+      <div class="container">
+        <router-view />
+      </div>
     </main>
-
   </div>
+  
 </template>
 
 <script>
@@ -19,6 +21,7 @@ import NavigationBar from './components/NavigationBar.vue'
 import { useUserStore } from './stores/user'
 import { useTravelPlanStore } from './stores/travelPlan'
 import { useNotificationStore } from './stores/notification'
+import pigIcon from '../piggybank.png'
 
 export default {
   name: 'App',
@@ -43,15 +46,14 @@ export default {
         }
       }
     )
-    return {}
+    return { pigIcon }
   }
 }
 </script>
 
 <style>
-body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 0; }
-#app { padding: 1rem; }
-header { background: #0b5fff; color: white; padding: 1rem; }
-main { margin-top: 1rem; }
-footer { margin-top: 2rem; color: #666; }
+#app { min-height: 100vh; }
+main { margin-top: .5rem; }
+.app-header .brand-title { display: inline-flex; align-items: center; gap: .5rem; }
+.brand-icon { width: 32px; height: 32px; border-radius: 4px; }
 </style>

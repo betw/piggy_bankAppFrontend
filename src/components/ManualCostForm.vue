@@ -1,26 +1,34 @@
 <template>
-  <div v-if="visible" class="manual-cost-form">
-    <h3>Manual Cost Estimate</h3>
-    <form @submit.prevent="onSubmit">
-      <label>
-        Flight Cost
-        <input v-model="form.flight" type="number" min="0" step="0.01" placeholder="e.g. 450" />
-      </label>
-      <label>
-        Rooms Per Night
-        <input v-model="form.roomsPerNight" type="number" min="0" step="0.01" placeholder="e.g. 180" />
-      </label>
-      <label>
-        Food Per Day
-        <input v-model="form.foodDaily" type="number" min="0" step="0.01" placeholder="e.g. 75" />
-      </label>
-      <div class="form-footer">
-        <button type="submit" :disabled="loading">{{ loading ? 'Saving…' : 'Save Estimate' }}</button>
-        <button type="button" @click="onCancel" :disabled="loading">Cancel</button>
+  <teleport to="body">
+    <div v-if="visible" class="modal-root" @keydown.esc="onCancel">
+      <div class="backdrop" @click="onCancel" aria-hidden="true"></div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="manual-cost-title" tabindex="-1">
+        <div class="manual-cost-form">
+          <h3 id="manual-cost-title">Manual Cost Estimate</h3>
+          <form @submit.prevent="onSubmit">
+            <label>
+              Flight Cost
+              <input v-model="form.flight" type="number" min="0" step="0.01" placeholder="e.g. 450" />
+            </label>
+            <label>
+              Rooms Per Night
+              <input v-model="form.roomsPerNight" type="number" min="0" step="0.01" placeholder="e.g. 180" />
+            </label>
+            <label>
+              Food Per Day
+              <input v-model="form.foodDaily" type="number" min="0" step="0.01" placeholder="e.g. 75" />
+            </label>
+            <div class="form-footer">
+              <button type="submit" :disabled="loading">{{ loading ? 'Saving…' : 'Save Estimate' }}</button>
+              <button type="button" @click="onCancel" :disabled="loading">Cancel</button>
+            </div>
+            <p v-if="displayError" class="error-message">{{ displayError }}</p>
+          </form>
+        </div>
       </div>
-      <p v-if="displayError" class="error-message">{{ displayError }}</p>
-    </form>
-  </div>
+    </div>
+  </teleport>
+  
 </template>
 
 <script setup>
@@ -99,41 +107,58 @@ const displayError = computed(() => localError.value || props.error)
 </script>
 
 <style scoped>
+/* modal layout */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+.modal {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+}
 .manual-cost-form {
-  margin-top: 2rem;
   width: 100%;
-  max-width: 420px;
   background: #fffefd;
   border: 1px solid #ffe58f;
   border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  padding: 0.9rem; /* tighter padding to reduce height */
+  box-shadow: 0 6px 24px rgba(0,0,0,0.18);
 }
 .manual-cost-form h3 {
   margin-top: 0;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   color: #8a5d00;
 }
 .manual-cost-form label {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.9rem;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
 .manual-cost-form input {
-  padding: 0.45rem 0.6rem;
+  padding: 0.4rem 0.55rem;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 1rem;
 }
 .form-footer {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 .form-footer button {
   flex: 1;
-  padding: 0.55rem 1.1rem;
+  padding: 0.45rem 0.9rem;
   border: none;
   border-radius: 4px;
   background: #ffe58f;

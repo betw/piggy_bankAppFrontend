@@ -1,16 +1,15 @@
 <template>
   <nav class="nav">
     <div class="nav-left">
-  <button @click="go('Home')">Home</button>
-  <button @click="go('AllGoals')">All Goals</button>
-  <button @click="go('Notifications')">Notifications</button>
-  <button @click="go('GoalDetail')">Travel Goal</button>
+      <button @click="go('Home')">Home</button>
+      <button @click="go('AllGoals')">All Goals</button>
+      <button @click="go('Notifications')">Notifications</button>
+      <button @click="go('GoalDetail')">Travel Goal</button>
     </div>
     <div class="nav-right" v-if="isLoggedIn">
       <span v-if="username" class="who">{{ username }}</span>
       <button @click="onLogout">Logout</button>
     </div>
-  <!-- debug output removed -->
   </nav>
 </template>
 
@@ -77,10 +76,15 @@ export default {
   font-weight: 500;
   margin-right: .5rem;
 }
-button {
-  padding: .5rem 1rem;
-  font-size: 1rem;
+.nav button {
+  /* Make nav buttons look like soft tabs on white */
+  background: #fff;
+  color: var(--ink-900);
+  border: 1px solid var(--ink-300);
+  border-radius: 10px;
+  padding: .5rem .9rem;
 }
+.nav button:hover { border-color: var(--green-500); }
 .debug {
   margin-left: 2rem;
   font-size: .95rem;

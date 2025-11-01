@@ -1,36 +1,43 @@
 <template>
   <section class="goal-detail-section">
-    <div v-if="hasPlan" class="goal-block-wrapper">
-      <TripNotification
-        :title="title"
-        :message="message"
-        :details="details"
-        :travelPlan="planForDisplay"
-        @delete="onDelete"
-      >
-        <TravelProgressInfo
-          :progress="progress"
-          :user-id="userId"
-          :travel-plan-id="activePlanId"
-          :total-cost="totalCostDisplay"
-          :savings-plan="planSavingsPlan"
-          :savings-progress="planSavingsProgress"
+    <div class="goal-layout">
+      <aside class="goal-actions-aside">
+        <GoalActionsPanel
+          :has-plan="hasPlan"
+          :estimating="estimating"
+          :manual-disabled="manualSubmitting || showManualCost"
+          :necessity-disabled="necessitySubmitting || showNecessityForm"
+          :status-message="statusMessage"
+          :error-message="errorMessage"
+          @estimate="onEstimate"
+          @manual="openManualCost"
+          @necessity="openNecessityForm"
+          @home="goHome"
         />
-      </TripNotification>
+      </aside>
+      <div class="goal-main">
+        <div v-if="hasPlan" class="goal-block-wrapper">
+          <TripNotification
+            :title="title"
+            :message="message"
+            :details="details"
+            :travelPlan="planForDisplay"
+            :show-plan-summary="false"
+            @delete="onDelete"
+          >
+            <TravelProgressInfo
+              :progress="progress"
+              :user-id="userId"
+              :travel-plan-id="activePlanId"
+              :total-cost="totalCostDisplay"
+              :savings-plan="planSavingsPlan"
+              :savings-progress="planSavingsProgress"
+            />
+          </TripNotification>
+        </div>
+        <p v-else class="empty-state">Travel goal details will appear after creating your first travel goal.</p>
+      </div>
     </div>
-    <p v-else class="empty-state">Travel goal details will appear after creating your first travel goal.</p>
-    <GoalActionsPanel
-      :has-plan="hasPlan"
-      :estimating="estimating"
-      :manual-disabled="manualSubmitting || showManualCost"
-      :necessity-disabled="necessitySubmitting || showNecessityForm"
-      :status-message="statusMessage"
-      :error-message="errorMessage"
-      @estimate="onEstimate"
-      @manual="openManualCost"
-      @necessity="openNecessityForm"
-      @home="goHome"
-    />
     <ManualCostForm
       :visible="showManualCost && hasPlan"
       :loading="manualSubmitting"
@@ -216,9 +223,6 @@ export default {
       }
       const summary = costSummary.value
       if (summary) out.push(summary)
-      if (totalCostDisplay.value !== null && totalCostDisplay.value !== undefined) {
-        out.push(`Total trip cost: ${totalCostDisplay.value}`)
-      }
       return out
     })
   const message = computed(() => [baseMessage.value].concat(details.value.length ? [''] : []).join(''))
@@ -371,20 +375,26 @@ export default {
 }
 </script>
 <style scoped>
-.goal-detail-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
+.goal-detail-section { display: block; }
+.goal-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
 }
+.goal-main { min-width: 0; }
+.goal-actions-aside { position: sticky; top: 1rem; align-self: start; }
 .goal-block-wrapper {
   width: 100%;
-  max-width: 700px;
+  max-width: none; /* allow the card to use available space in grid */
   transition: background 0.2s;
 }
-.goal-block-wrapper :deep(.trip-notification) {
-  min-height: 220px;
+.goal-block-wrapper :deep(.trip-notification) { min-height: 220px; }
+@media (max-width: 900px) {
+  .goal-layout { grid-template-columns: 1fr; }
+  .goal-actions-aside { position: static; order: 2; }
+  .goal-main { order: 1; }
+  .goal-block-wrapper :deep(.trip-notification) { min-height: unset; }
 }
 .empty-state {
   margin-top: 2rem;

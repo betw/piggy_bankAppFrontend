@@ -166,11 +166,11 @@ function handleKeydown(event) {
 
 <style scoped>
 .halfway-notification {
-  background: #fff9db;
-  border: 1px solid #ffe58f;
+  background: var(--attn-bg);
+  border: 1px solid var(--attn-border);
   border-radius: 10px;
   padding: 1.2rem 1.4rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -190,13 +190,13 @@ function handleKeydown(event) {
 }
 .title {
   margin: 0;
-  color: #8a5d00;
+  color: var(--attn-title);
   font-size: 1.1rem;
   font-weight: 600;
 }
 .badge {
-  background: #ffd666;
-  color: #663c00;
+  background: #fecdd3;
+  color: #9f1239;
   border-radius: 999px;
   padding: 0.15rem 0.75rem;
   font-size: 0.85rem;
@@ -205,8 +205,8 @@ function handleKeydown(event) {
 .delete-button {
   background: transparent;
   border: none;
-  color: #8a5d00;
-  font-weight: 600;
+  color: #b91c1c; /* red */
+  font-weight: 700;
   font-size: 0.95rem;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
@@ -215,16 +215,16 @@ function handleKeydown(event) {
 }
 .delete-button:hover,
 .delete-button:focus-visible {
-  background: rgba(255, 0, 0, 0.1);
-  color: #c43820;
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
   outline: none;
 }
 .delete-button:active {
-  background: rgba(255, 0, 0, 0.2);
+  background: rgba(185, 28, 28, 0.2);
 }
 .message {
   margin: 0;
-  color: #5c3d00;
+  color: #7a294a;
   font-size: 1rem;
 }
 .body {
@@ -244,7 +244,7 @@ function handleKeydown(event) {
   align-items: baseline;
   gap: 0.35rem;
   font-size: 0.9rem;
-  color: #5c3d00;
+  color: #7a294a;
 }
 .plan-row .label {
   font-weight: 600;
@@ -258,15 +258,14 @@ function handleKeydown(event) {
 }
 .frequency {
   margin: 0;
-  color: #8a5d00;
+  color: #b83280;
   font-size: 0.9rem;
 }
 .halfway-notification:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
-.halfway-notification:focus-visible {
-  outline: 2px solid #ffd666;
-  outline-offset: 3px;
-}
+.halfway-notification:focus-visible { box-shadow: var(--ring); outline: none; }
+/* Currency inside notifications should not turn app-wide green */
+.money { color: inherit; font-weight: 700; }
 </style>

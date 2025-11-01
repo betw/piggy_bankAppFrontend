@@ -1,22 +1,29 @@
 <template>
-  <div v-if="visible" class="necessity-form">
-    <h3>Travel Necessities</h3>
-    <form @submit.prevent="onSubmit">
-      <label>
-        <input type="checkbox" v-model="form.accommodation" />
-        Save for accommodation (rooms)
-      </label>
-      <label>
-        <input type="checkbox" v-model="form.diningFlag" />
-        Save for dining out
-      </label>
-      <div class="form-footer">
-        <button type="submit" :disabled="loading">{{ loading ? 'Updating…' : 'Update Necessities' }}</button>
-        <button type="button" @click="onCancel" :disabled="loading">Cancel</button>
+  <teleport to="body">
+    <div v-if="visible" class="modal-root" @keydown.esc="onCancel">
+      <div class="backdrop" @click="onCancel" aria-hidden="true"></div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="necessity-title" tabindex="-1">
+        <div class="necessity-form">
+          <h3 id="necessity-title">Travel Necessities</h3>
+          <form @submit.prevent="onSubmit">
+            <label>
+              <input type="checkbox" v-model="form.accommodation" />
+              Save for accommodation (rooms)
+            </label>
+            <label>
+              <input type="checkbox" v-model="form.diningFlag" />
+              Save for dining out
+            </label>
+            <div class="form-footer">
+              <button type="submit" :disabled="loading">{{ loading ? 'Updating…' : 'Update Necessities' }}</button>
+              <button type="button" @click="onCancel" :disabled="loading">Cancel</button>
+            </div>
+            <p v-if="error" class="error-message">{{ error }}</p>
+          </form>
+        </div>
       </div>
-      <p v-if="error" class="error-message">{{ error }}</p>
-    </form>
-  </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup>
@@ -64,26 +71,43 @@ function onCancel() {
 </script>
 
 <style scoped>
+/* modal layout */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+.modal {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+}
 .necessity-form {
-  margin-top: 2rem;
   width: 100%;
-  max-width: 420px;
   background: #fffefd;
   border: 1px solid #ffe58f;
   border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  padding: 0.9rem; /* tighter padding to reduce height */
+  box-shadow: 0 6px 24px rgba(0,0,0,0.18);
 }
 .necessity-form h3 {
   margin-top: 0;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   color: #8a5d00;
 }
 .necessity-form label {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.9rem;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
 .necessity-form input[type="checkbox"] {
@@ -92,11 +116,11 @@ function onCancel() {
 }
 .form-footer {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 .form-footer button {
   flex: 1;
-  padding: 0.55rem 1.1rem;
+  padding: 0.45rem 0.9rem;
   border: none;
   border-radius: 4px;
   background: #ffe58f;

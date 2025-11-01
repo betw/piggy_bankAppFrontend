@@ -1,5 +1,6 @@
 <template>
   <section>
+    <h2 class="home-tagline">Save for your next trip!</h2>
     <div class="auth-banner" v-if="!userStore.currentUser">
       <p>You must be logged in to create a travel plan.</p>
       <button @click.prevent="goLogin">Login</button>
@@ -136,20 +137,32 @@ export default {
 </script> 
 
 <style scoped>
+.home-tagline {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: var(--ink-900, #0f172a);
+  text-align: center;
+}
 .trip-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.6rem;
   flex-direction: column;
+  align-items: stretch;
+  width: min(520px, 100%);
+  margin: 0 auto; /* center form horizontally */
 }
+.trip-form label { display: flex; flex-direction: column; gap: 0.25rem; }
 input {
-  padding: .5rem;
+  padding: 0.4rem 0.55rem;
   font-size: 1rem;
 }
-button {
-  padding: .5rem 1rem;
-  font-size: 1rem;
-  margin-top: .5rem;
+.trip-form button {
+  padding: 0.4rem 0.85rem; /* slightly shorter */
+  font-size: 0.98rem;
+  margin-top: 0.35rem;
+  width: auto; /* don't stretch full width */
+  align-self: center; /* center horizontally */
 }
 .error {
   color: #a00;

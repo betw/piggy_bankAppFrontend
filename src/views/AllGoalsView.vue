@@ -8,9 +8,10 @@
         title="Travel Goal"
         :message="''"
         :travelPlan="plan"
+        :show-plan-summary="false"
+        :clickable="true"
         :show-delete="false"
         @click="goToGoalDetail(plan.id)"
-        style="cursor:pointer;"
       />
     </div>
     <p v-else class="empty-state">All goals will appear after creating your first travel goal.</p>
@@ -44,19 +45,6 @@ export default {
 </script>
 
 <style scoped>
-.trip-notification {
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s;
-}
-.trip-notification:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-}
-
 .goals-list {
   display: flex;
   flex-direction: column;
