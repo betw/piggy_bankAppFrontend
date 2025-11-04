@@ -7,7 +7,9 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     currentUser: null,
     token: null,
-    username: ''
+    username: '',
+    // holds the last registration error message (not persisted)
+    registerError: null
   }),
   actions: {
     hydrate() {
@@ -99,8 +101,16 @@ export const useUserStore = defineStore('user', {
       }
     },
     async register(username, password) {
+      this.registerError = null
       try {
         const res = await api.post('/PasswordAuthentication/register', { username, password })
+        // Some backends return 200 with an error field; handle that
+        const possibleError = res?.data?.message || res?.data?.error
+        if (possibleError) {
+          this.registerError = possibleError
+          throw new Error(possibleError)
+        }
+
         this.currentUser = res.data?.user ?? null
         this.username = username
         const token = res.data?.token ?? null
@@ -109,7 +119,10 @@ export const useUserStore = defineStore('user', {
         this._persistState()
         return this.currentUser
       } catch (err) {
-        throw err?.response?.data?.error || err.message || err
+        // Surface a friendly error for the UI to display
+        const message = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Registration failed'
+        this.registerError = message
+        throw message
       }
     },
     logout() {
