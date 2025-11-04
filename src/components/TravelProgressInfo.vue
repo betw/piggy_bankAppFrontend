@@ -112,6 +112,8 @@ const form = reactive({ paymentPeriod: '', amountPerPeriod: '', goalAmount: '' }
 const submitting = ref(false)
 const error = ref('')
 const planSummary = ref(null)
+// Tracks whether there's a real saved savings plan (not just a provisional one built from totalCost)
+const hasActualPlan = ref(false)
 const totalMismatch = ref(false)
 const formOpen = ref(true)
 const goalTarget = ref(null)
@@ -279,18 +281,19 @@ async function createPlan() {
 watch(
   () => props.totalCost,
   (newTotal) => {
-    if (newTotal !== null && newTotal !== undefined && newTotal !== '') {
-      const numericTotal = Number(newTotal)
-      if (Number.isFinite(numericTotal)) {
-        if (!planSummary.value || planSummary.value.goalAmount == null) {
+    // Allow totalCost to drive the goal until a real savings plan exists
+    if (!hasActualPlan.value) {
+      if (newTotal !== null && newTotal !== undefined && newTotal !== '') {
+        const numericTotal = Number(newTotal)
+        if (Number.isFinite(numericTotal)) {
           goalTarget.value = numericTotal
           if (form.goalAmount === '' || form.goalAmount === null) {
             form.goalAmount = numericTotal
           }
         }
+      } else {
+        goalTarget.value = null
       }
-    } else if (!planSummary.value || planSummary.value.goalAmount == null) {
-      goalTarget.value = null
     }
   },
   { immediate: true }
@@ -340,6 +343,12 @@ watch(
   (newPlan) => {
     const normalized = normalizeSavingsPlan(newPlan)
     planSummary.value = normalized
+    hasActualPlan.value = !!(
+      normalized && (
+        normalized.paymentPeriod !== null && normalized.paymentPeriod !== undefined ||
+        normalized.amountPerPeriod !== null && normalized.amountPerPeriod !== undefined
+      )
+    )
     if (normalized) {
       if (normalized.goalAmount !== undefined && normalized.goalAmount !== null) {
         const numericGoal = Number(normalized.goalAmount)
