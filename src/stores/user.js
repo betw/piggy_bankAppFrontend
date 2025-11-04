@@ -1,48 +1,47 @@
 import { defineStore } from 'pinia'
-import api from '../services/api'
-
-const STORAGE_KEY = 'pb_user'
+import api, { authAPI } from '../services/api'
+// Persist only session/username under piggybank_* keys; do not use a blob key
 
 export const useUserStore = defineStore('user', {
   state: () => ({
+    // auth/session state (primary source for app auth)
+    session: localStorage.getItem('piggybank_session') || null,
+    username: localStorage.getItem('piggybank_username') || '',
+
+    // compatibility fields used elsewhere in the app
     currentUser: null,
     token: null,
-    username: '',
+
     // holds the last registration error message (not persisted)
     registerError: null
   }),
+  getters: {
+    isAuthenticated: (state) => !!state.session
+  },
   actions: {
     hydrate() {
+      // Load piggybank_* keys for session + username
       try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (!raw) return
-        const data = JSON.parse(raw)
-        this.currentUser = data.user ?? data.currentUser ?? null
-        this.token = data.token ?? null
-        this.username = data.username ?? ''
-      } catch (e) {
-        // if parsing fails, clear bad data
-        localStorage.removeItem(STORAGE_KEY)
-        this.username = ''
-        return
+        const session = localStorage.getItem('piggybank_session')
+        const username = localStorage.getItem('piggybank_username')
+        if (session) this.session = session
+        if (username) this.username = username
+      } catch {}
+
+      // If no explicit user object is saved, treat username as the identifier
+      if (!this.currentUser && this.username) {
+        this.currentUser = this.username
       }
+
       if (this.currentUser && !this.username) {
         this.refreshUsername().catch(() => {})
       }
     },
-    _persistState() {
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ user: this.currentUser, token: this.token, username: this.username })
-        )
-      } catch {}
-    },
+    // No blob persistence; currentUser/token are in-memory only
     async refreshUsername() {
+      // If no currentUser, don't clobber any existing username; just return it.
       if (!this.currentUser) {
-        this.username = ''
-        this._persistState()
-        return ''
+        return this.username || ''
       }
 
       let identifier = null
@@ -76,25 +75,33 @@ export const useUserStore = defineStore('user', {
       } catch (err) {
         console.error('[user] refreshUsername failed:', err)
       }
-
-      this._persistState()
       return this.username
     },
     async login(username, password) {
       try {
-        const res = await api.post('/PasswordAuthentication/authenticate', { username, password })
+        // Use authAPI for application login
+        const res = await authAPI.login(username, password)
+        const data = res?.data ?? res
         // Only set currentUser if no error in response
-        if (res.data?.error) {
-          throw res.data.error
+        if (data?.error) {
+          throw data.error
         }
-        this.currentUser = res.data?.user ?? res.data ?? null
+        // Session/token
+        this.session = data.session
+
+        // Identity
         this.username = username
-        // persist minimal user payload; include token if backend returns it
-        const token = res.data?.token ?? null
-        this.token = token
+        this.currentUser = data?.user ?? username
+
+        // Persist session + username (primary)
+        try {
+          if (this.session) localStorage.setItem('piggybank_session', this.session)
+          if (this.username) localStorage.setItem('piggybank_username', this.username)
+        } catch {}
+
+        // Optionally refresh canonical username if backend supports it
         await this.refreshUsername()
-        this._persistState()
-        return this.currentUser
+        return data
       } catch (err) {
         // rethrow to let UI handle error message
         throw err?.response?.data?.error || err.message || err
@@ -103,21 +110,20 @@ export const useUserStore = defineStore('user', {
     async register(username, password) {
       this.registerError = null
       try {
-        const res = await api.post('/PasswordAuthentication/register', { username, password })
+        // Use authAPI for application registration
+        const res = await authAPI.register(username, password)
+        const data = res?.data ?? res
         // Some backends return 200 with an error field; handle that
-        const possibleError = res?.data?.message || res?.data?.error
+        const possibleError = data?.message || data?.error
         if (possibleError) {
           this.registerError = possibleError
           throw new Error(possibleError)
         }
 
-        this.currentUser = res.data?.user ?? null
-        this.username = username
-        const token = res.data?.token ?? null
-        this.token = token
-        await this.refreshUsername()
-        this._persistState()
-        return this.currentUser
+        // Do NOT log in automatically after registration.
+        // Do NOT set session/currentUser/username or persist anything here.
+        // Let the UI prompt the user to sign in with their new credentials.
+        return data?.user ?? null
       } catch (err) {
         // Surface a friendly error for the UI to display
         const message = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Registration failed'
@@ -125,11 +131,23 @@ export const useUserStore = defineStore('user', {
         throw message
       }
     },
-    logout() {
-      this.currentUser = null
+    async logout() {
+      if (this.session) {
+        try {
+          await authAPI.logout(this.session)
+        } catch (error) {
+          // Continue logout even if API call fails
+          console.error('Logout API call failed:', error)
+        }
+      }
+
+      this.session = null
       this.token = null
-      this.username = ''
-      try { localStorage.removeItem(STORAGE_KEY) } catch {}
+      this.currentUser = null
+      this.username = null
+
+      try { localStorage.removeItem('piggybank_session') } catch {}
+      try { localStorage.removeItem('piggybank_username') } catch {}
     }
   }
 })
