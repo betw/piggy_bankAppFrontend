@@ -72,10 +72,6 @@ export const costEstimateAPI = {
     // payload: { user, travelPlan }
     return api.post('TripCostEstimation/getTravelDates', payload)
   },
-  async estimateCost(payload) {
-    // payload: { user, travelPlan }
-    return api.post('TripCostEstimation/estimateCost', payload)
-  },
   async getAllTravelPlans(payload) {
     // payload: { user }
     return api.post('TripCostEstimation/_getAllTravelPlans', payload)
