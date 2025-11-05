@@ -41,7 +41,7 @@ export const costEstimateAPI = {
 
   // Necessities
   async updateNecessity(payload) {
-    // payload: { user, travelPlan, accommodation, diningFlag }
+    // payload: { user, travelPlan, accommodation, diningFlag, session? }
     return api.post('TripCostEstimation/updateNecessity', payload)
   },
   async resetNecessity(payload) {
