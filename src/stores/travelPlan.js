@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import api from '../services/api'
+import api, { costEstimateAPI } from '../services/api'
 import { useNotificationStore } from './notification'
 import { useUserStore } from './user'
 
@@ -354,7 +354,14 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       // log payload so client console shows attempt to create plan
       try {
   console.log('[travelPlan] createTravelPlan payload:', payload)
-  const res = await api.post('TripCostEstimation/createTravelPlan', payload)
+  // include session if available in the payload body
+  try {
+    const userStore = useUserStore()
+    if (userStore?.session) {
+      payload = { ...payload, session: userStore.session } // avoid mutating caller's object
+    }
+  } catch {}
+  const res = await costEstimateAPI.createTravelPlan(payload)
   console.log('[travelPlan] createTravelPlan response:', res.data)
         if (res.data?.error) throw new Error(res.data.error)
         let travelPlan = res.data?.travelPlan ?? res.data
@@ -400,7 +407,7 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       try {
         console.log('[travelPlan] deleteTravelPlan request:', payload)
         // Call backend to delete
-        const res = await api.post('TripCostEstimation/deleteTravelPlan', payload)
+  const res = await costEstimateAPI.deleteTravelPlan(payload)
         if (res.data?.error) throw new Error(res.data.error)
       } catch (err) {
         console.error('[travelPlan] deleteTravelPlan error:', err)
@@ -429,7 +436,7 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       const payload = { user: userId, travelPlan: travelPlanId }
       try {
         console.log('[travelPlan] generateCostEstimate request:', payload)
-        const res = await api.post('TripCostEstimation/generateAICostEstimate', payload)
+  const res = await costEstimateAPI.generateAICostEstimate(payload)
         if (res.data?.error) throw new Error(res.data.error)
         const estimate = res.data?.costEstimate ?? res.data
         this._mergePlanUpdate(planId, {
@@ -451,7 +458,7 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       const payload = { user: userId, travelPlan: travelPlanId }
       try {
         console.log('[travelPlan] estimateTotalCost request:', payload)
-        const res = await api.post('TripCostEstimation/estimateCost', payload)
+  const res = await costEstimateAPI.estimateCost(payload)
         if (res.data?.error) throw new Error(res.data.error)
         const totalCost = res.data?.totalCost ?? res.data
         this._mergePlanUpdate(planId, { totalCost })
@@ -475,7 +482,7 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       }
       try {
         console.log('[travelPlan] editCostEstimate request:', payload)
-        const res = await api.post('TripCostEstimation/editEstimateCost', payload)
+  const res = await costEstimateAPI.editEstimateCost(payload)
         if (res.data?.error) throw new Error(res.data.error)
         const estimate = res.data?.costEstimate ?? res.data
         this._mergePlanUpdate(planId, {
@@ -502,7 +509,7 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       }
       try {
         console.log('[travelPlan] updateNecessity request:', payload)
-        const res = await api.post('TripCostEstimation/updateNecessity', payload)
+  const res = await costEstimateAPI.updateNecessity(payload)
         if (res.data?.error) throw new Error(res.data.error)
         const responsePlan = typeof res.data?.travelPlan === 'object' ? res.data.travelPlan : null
         const responseNecessity = res.data?.necessity ?? {
