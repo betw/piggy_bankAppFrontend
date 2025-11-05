@@ -54,6 +54,9 @@ export const costEstimateAPI = {
     // payload: { user, travelPlan }
     return api.post('TripCostEstimation/generateAICostEstimate', payload)
   },
+  async estimateCost(payload){
+    return api.post('TripCostEstimation/estimateCost', payload)
+  },
   async editEstimateCost(payload) {
     // payload: { user, travelPlan, flight, roomsPerNight, foodDaily }
     return api.post('TripCostEstimation/editEstimateCost', payload)

@@ -501,13 +501,20 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       if (!planId) throw new Error('updateNecessity: missing travel plan id')
       if (!userId) throw new Error('updateNecessity: missing user id')
       const { travelPlanId } = resolvePlanIdentifiers(this, planId)
-      const payload = {
+      let payload = {
         user: userId,
         travelPlan: travelPlanId,
         accommodation: Boolean(accommodation),
         diningFlag: Boolean(diningFlag)
       }
       try {
+        // include session if available in the payload body
+        try {
+          const userStore = useUserStore()
+          if (userStore?.session) {
+            payload = { ...payload, session: userStore.session }
+          }
+        } catch {}
         console.log('[travelPlan] updateNecessity request:', payload)
   const res = await costEstimateAPI.updateNecessity(payload)
         if (res.data?.error) throw new Error(res.data.error)
