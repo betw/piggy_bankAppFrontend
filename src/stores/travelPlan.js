@@ -350,7 +350,7 @@ export const useTravelPlanStore = defineStore('travelPlan', {
       return merged
     },
     async createTravelPlan(payload) {
-      // payload: { user, fromCity, toCity, fromDate, toDate }
+      // payload: { fromCity, toCity, fromDate, toDate, session? }
       // log payload so client console shows attempt to create plan
       try {
   console.log('[travelPlan] createTravelPlan payload:', payload)
@@ -377,7 +377,6 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         }
         if (id === undefined || id === null) throw new Error('No travelPlan id returned')
         const planId = String(id)
-        const ownerId = resolveUserId(payload.user)
         const progressTrackingId = extractProgressTrackingId(travelPlan)
         const planObj = {
           id: planId,
@@ -385,7 +384,6 @@ export const useTravelPlanStore = defineStore('travelPlan', {
           toCity: payload.toCity,
           fromDate: payload.fromDate,
           toDate: payload.toDate,
-          user: ownerId,
           progressTrackingId: progressTrackingId ?? null,
           ...(typeof travelPlan === 'object' ? travelPlan : {})
         }
@@ -397,14 +395,18 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         throw err
       }
     },
-    async deleteTravelPlan(id, user) {
+    async deleteTravelPlan(id, _user) {
       if (!id) throw new Error('deleteTravelPlan: missing travel plan id')
-      // API spec requires `user` to be an ID, not an object
-      const userId = resolveUserId(user)
-      if (!userId) throw new Error('deleteTravelPlan: missing user id')
       const { id: planId, travelPlanId } = resolvePlanIdentifiers(this, id)
-      const payload = { user: userId, travelPlan: travelPlanId }
+      let payload = { travelPlan: travelPlanId }
       try {
+        // include session if available
+        try {
+          const userStore = useUserStore()
+          if (userStore?.session) {
+            payload = { ...payload, session: userStore.session }
+          }
+        } catch {}
         console.log('[travelPlan] deleteTravelPlan request:', payload)
         // Call backend to delete
   const res = await costEstimateAPI.deleteTravelPlan(payload)
@@ -428,13 +430,18 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         this.persist()
       } catch {}
     },
-    async generateCostEstimate(planId, user) {
-      const userId = resolveUserId(user)
+    async generateCostEstimate(planId, _user) {
       if (!planId) throw new Error('generateCostEstimate: missing travel plan id')
-      if (!userId) throw new Error('generateCostEstimate: missing user id')
       const { travelPlanId } = resolvePlanIdentifiers(this, planId)
-      const payload = { user: userId, travelPlan: travelPlanId }
+      let payload = { travelPlan: travelPlanId }
       try {
+        // include session if available
+        try {
+          const userStore = useUserStore()
+          if (userStore?.session) {
+            payload = { ...payload, session: userStore.session }
+          }
+        } catch {}
         console.log('[travelPlan] generateCostEstimate request:', payload)
   const res = await costEstimateAPI.generateAICostEstimate(payload)
         if (res.data?.error) throw new Error(res.data.error)
@@ -450,13 +457,18 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         throw err?.response?.data?.error || err.message || err
       }
     },
-    async estimateTotalCost(planId, user) {
-      const userId = resolveUserId(user)
+    async estimateTotalCost(planId, _user) {
       if (!planId) throw new Error('estimateTotalCost: missing travel plan id')
-      if (!userId) throw new Error('estimateTotalCost: missing user id')
       const { travelPlanId } = resolvePlanIdentifiers(this, planId)
-      const payload = { user: userId, travelPlan: travelPlanId }
+      let payload = { travelPlan: travelPlanId }
       try {
+        // include session if available
+        try {
+          const userStore = useUserStore()
+          if (userStore?.session) {
+            payload = { ...payload, session: userStore.session }
+          }
+        } catch {}
         console.log('[travelPlan] estimateTotalCost request:', payload)
   const res = await costEstimateAPI.estimateCost(payload)
         if (res.data?.error) throw new Error(res.data.error)
@@ -468,19 +480,23 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         throw err?.response?.data?.error || err.message || err
       }
     },
-    async editCostEstimate(planId, user, { flight, roomsPerNight, foodDaily }) {
-      const userId = resolveUserId(user)
+    async editCostEstimate(planId, _user, { flight, roomsPerNight, foodDaily }) {
       if (!planId) throw new Error('editCostEstimate: missing travel plan id')
-      if (!userId) throw new Error('editCostEstimate: missing user id')
       const { travelPlanId } = resolvePlanIdentifiers(this, planId)
-      const payload = {
-        user: userId,
+      let payload = {
         travelPlan: travelPlanId,
         flight,
         roomsPerNight,
         foodDaily
       }
       try {
+        // include session if available
+        try {
+          const userStore = useUserStore()
+          if (userStore?.session) {
+            payload = { ...payload, session: userStore.session }
+          }
+        } catch {}
         console.log('[travelPlan] editCostEstimate request:', payload)
   const res = await costEstimateAPI.editEstimateCost(payload)
         if (res.data?.error) throw new Error(res.data.error)
@@ -496,13 +512,10 @@ export const useTravelPlanStore = defineStore('travelPlan', {
         throw err?.response?.data?.error || err.message || err
       }
     },
-  async updateNecessity(planId, user, { accommodation, diningFlag }) {
-      const userId = resolveUserId(user)
+  async updateNecessity(planId, _user, { accommodation, diningFlag }) {
       if (!planId) throw new Error('updateNecessity: missing travel plan id')
-      if (!userId) throw new Error('updateNecessity: missing user id')
       const { travelPlanId } = resolvePlanIdentifiers(this, planId)
       let payload = {
-        user: userId,
         travelPlan: travelPlanId,
         accommodation: Boolean(accommodation),
         diningFlag: Boolean(diningFlag)
