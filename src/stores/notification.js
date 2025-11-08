@@ -283,13 +283,24 @@ export const useNotificationStore = defineStore('notification', {
       const userStore = useUserStore()
       const session = userStore?.session
       if (!session) return []
+      
+      console.log('[notification] fetchNotifications BEFORE - current notifications:', 
+        this.notifications.map(n => ({ id: n.id, message: n.message?.substring(0, 30) })))
+      
       try {
         const existingById = new Map(
           Array.isArray(this.notifications)
             ? this.notifications.map((item) => [item?.id, item])
             : []
         )
+        
+        console.log('[notification] existingById size:', existingById.size)
+        
+        // API uses session-based authentication
         const payload = { session }
+        
+        console.log('[notification] fetchNotifications payload:', payload)
+        
         const res = await notificationAPI.getAllNotifications(payload)
         
         // According to API spec, response is [{ notification: "Notification" }]
@@ -340,15 +351,27 @@ export const useNotificationStore = defineStore('notification', {
           existingLocal: Array.from(existingById.values()).map(n => ({ id: n.id, message: n.message, synthetic: n.synthetic }))
         })
         
-        // Preserve locally created (synthetic) notifications that aren't in the backend response
+        // Preserve locally created notifications that aren't in the backend response
+        // This handles cases where the backend hasn't returned recently created notifications yet
         const backendIds = new Set(normalized.map(n => n.id))
         const localOnlyNotifications = Array.from(existingById.values())
-          .filter(n => n.synthetic && !backendIds.has(n.id))
+          .filter(n => !backendIds.has(n.id))
+        
+        console.log('[notification] Preservation check:', {
+          backendCount: normalized.length,
+          localCount: existingById.size,
+          localOnlyCount: localOnlyNotifications.length,
+          backendIds: Array.from(backendIds),
+          localIds: Array.from(existingById.keys())
+        })
         
         if (localOnlyNotifications.length > 0) {
-          console.log('[notification] Preserving local-only notifications:', localOnlyNotifications.map(n => ({ id: n.id, message: n.message })))
+          console.log('[notification] Preserving local notifications not in backend response:', 
+            localOnlyNotifications.map(n => ({ id: n.id, message: n.message, synthetic: n.synthetic })))
           normalized.push(...localOnlyNotifications)
         }
+        
+        console.log('[notification] FINAL normalized count:', normalized.length)
         
         this.notifications = sortNewestFirst(normalized, this.meta)
         if (!normalized.length) {
@@ -437,11 +460,8 @@ export const useNotificationStore = defineStore('notification', {
       try {
         const apiPayload = { ...payload }
         if (session) apiPayload.session = session
-        // Keep user field if provided in payload (backend may require it)
-        // Only remove it if session exists and user is not provided
-        if (!apiPayload.user && !session) {
-          console.warn('[notification] createNotification: no user or session provided')
-        }
+        // Remove user field - API uses session-based authentication only
+        delete apiPayload.user
         
         console.log('[notification] createNotification API payload:', apiPayload)
         

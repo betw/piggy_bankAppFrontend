@@ -279,11 +279,7 @@ async function createPlan() {
         // Create a savings reminder notification
         const reminderMessage = `Savings reminder: set aside $${summary.amountPerPeriod} every ${summary.paymentPeriod} months.`
         
-        // Get user from userStore for the notification payload
-        const currentUser = userStore?.currentUser || userStore?.username
-        
         console.log('[TravelProgress] Creating savings reminder notification with:', {
-          user: currentUser,
           progress: normalizedProgressId,
           message: reminderMessage,
           frequency: summary.paymentPeriod,
@@ -295,11 +291,6 @@ async function createPlan() {
           progress: normalizedProgressId,
           message: reminderMessage,
           frequency: summary.paymentPeriod ?? 0
-        }
-        
-        // Add user if available (backend may require it even with session)
-        if (currentUser) {
-          notificationPayload.user = currentUser
         }
         
         const createdNotif = await notificationStore.createNotification(

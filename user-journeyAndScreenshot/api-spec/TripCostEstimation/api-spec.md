@@ -19,7 +19,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "fromCity": "ID",
   "toCity": "ID",
   "fromDate": "Date",
@@ -46,7 +46,7 @@
 **Description:** Deletes a specified travel plan and all of its associated data.
 
 **Requirements:**
-- `travelPlan` exists and belongs to user
+- `travelPlan` exists and belongs to the user associated with the session
 
 **Effects:**
 - Delete the `travelPlan` and any associated `CostEstimates`
@@ -54,7 +54,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID"
 }
 ```
@@ -78,7 +78,7 @@
 **Description:** Updates the accommodation and dining preferences for a given travel plan.
 
 **Requirements:**
-- `travelPlan` exists and belongs to user
+- `travelPlan` exists and belongs to the user associated with the session
 
 **Effects:**
 - Update the `necessity` linked to `travelPlan` with new `accommodation` and `diningFlag` values.
@@ -86,7 +86,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID",
   "accommodation": "Boolean",
   "diningFlag": "Boolean"
@@ -113,7 +113,7 @@
 **Description:** Resets a travel plan's necessity preferences to their default values.
 
 **Requirements:**
-- `travelPlan` exists and belongs to user
+- `travelPlan` exists and belongs to the user associated with the session
 
 **Effects:**
 - Reset the `necessity` belonging to `travelPlan` to the default as described in the action `createTravelPlan`
@@ -121,7 +121,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID"
 }
 ```
@@ -145,7 +145,7 @@
 **Description:** Generates a new cost estimate for a travel plan using an AI model.
 
 **Requirements:**
-- `travelPlan` exists and belongs to user
+- `travelPlan` exists and belongs to the user associated with the session
 
 **Effects:**
 - Retrieves trip details (dates, locations) and necessity preference (accommodation, dining) and uses the llm's specialized tool (e.g., Google Search/Flights/Hotels) to calculate and return the median cost estimates for flight, `rooms_per_night`, and `food_daily`; the resulting data is stored as a new `CostEstimate` associated with the `travelPlanID`. The `TravelPlan`'s `latestCostEstimateID` is updated to this new estimate.
@@ -153,7 +153,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID"
 }
 ```
@@ -177,7 +177,7 @@
 **Description:** Manually creates or updates a cost estimate with user-provided values.
 
 **Requirements:**
-- `travelPlan` exists and belongs to user.
+- `travelPlan` exists and belongs to the user associated with the session.
 - `flight`, `roomsPerNight`, and `foodDaily` are non-negative numbers.
 
 **Effects:**
@@ -186,7 +186,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID",
   "flight": "Number",
   "roomsPerNight": "Number",
@@ -213,7 +213,7 @@
 **Description:** Deletes a specific cost estimate and updates the travel plan to point to the next most recent one.
 
 **Requirements:**
-- `costEstimate` exists and belongs to user
+- `costEstimate` exists and belongs to the user associated with the session
 
 **Effects:**
 - Deletes the `CostEstimate` and updates the travel plan's `latestCostEstimateID` to the second most recently updated estimate (if any), or clears it if none remain.
@@ -221,7 +221,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "costEstimate": "ID"
 }
 ```
@@ -245,7 +245,7 @@
 **Description:** Retrieves the origin and destination cities for a specified travel plan.
 
 **Requirements:**
-- `travelPlan` exists and belongs to the user
+- `travelPlan` exists and belongs to the user associated with the session
 
 **Effects:**
 - Returns `fromCity` and `toCity` for the specified `travelPlan`
@@ -253,7 +253,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID"
 }
 ```
@@ -278,7 +278,7 @@
 **Description:** Retrieves the start and end dates for a specified travel plan.
 
 **Requirements:**
-- `travelPlan` exists and belongs to the user
+- `travelPlan` exists and belongs to the user associated with the session
 
 **Effects:**
 - Returns `fromDate` and `toDate` for the specified `travelPlan`
@@ -286,7 +286,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID"
 }
 ```
@@ -311,7 +311,7 @@
 **Description:** Calculates the total estimated cost for a travel plan based on its most recent cost estimate.
 
 **Requirements:**
-- `travelPlan` exists and belongs to user and an associated `CostEstimate` exists
+- `travelPlan` exists and belongs to the user associated with the session and an associated `CostEstimate` exists
 
 **Effects:**
 - Calculates and returns the `totalCost` by multiplying the estimated daily/nightly costs by the duration and adding the flight cost.
@@ -319,7 +319,7 @@
 **Request Body:**
 ```json
 {
-  "user": "ID",
+  "session": "Session",
   "travelPlan": "ID"
 }
 ```
@@ -343,15 +343,15 @@
 **Description:** Retrieves a list of all travel plan IDs associated with a given user.
 
 **Requirements:**
-- `user` exists
+- session is valid
 
 **Effects:**
-- Returns a list of all `TravelPlan` IDs associated with the given `user`.
+- Returns a list of all `TravelPlan` IDs associated with the user associated with the session.
 
 **Request Body:**
 ```json
 {
-  "user": "ID"
+  "session": "Session"
 }
 ```
 

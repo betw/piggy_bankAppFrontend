@@ -19,7 +19,7 @@
 **Request Body:**
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "progress": "ProgressTracking",
   "frequency": "Number",
   "message": "String"
@@ -47,7 +47,7 @@
 **Description:** Deletes a specific notification belonging to a user.
 
 **Requirements:**
-- notification exists and belongs to user
+- notification exists and belongs to the user associated with the session
 
 **Effects:**
 - deletes the notification
@@ -55,7 +55,7 @@
 **Request Body:**
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "notification": "Notification"
 }
 ```
@@ -79,15 +79,15 @@
 **Description:** Returns a list of all notifications belonging to the specified user, sorted by date.
 
 **Requirements:**
-- user exists
+- session is valid
 
 **Effects:**
-- returns a list of all notifications belonging to the specified user sorted by the date
+- returns a list of all notifications belonging to the user associated with the session sorted by the date
 
 **Request Body:**
 ```json
 {
-  "user": "User"
+  "session": "Session"
 }
 ```
 
@@ -114,7 +114,7 @@
 **Description:** Retrieves the message and frequency for a notification belonging to the specified user.
 
 **Requirements:**
-- notification exists and belongs to user
+- notification exists and belongs to the user associated with the session
 
 **Effects:**
 - returns the message and frequency of the specified notification
@@ -122,7 +122,7 @@
 **Request Body:**
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "notification": "Notification"
 }
 ```

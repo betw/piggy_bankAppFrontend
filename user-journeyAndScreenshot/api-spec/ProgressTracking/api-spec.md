@@ -22,7 +22,7 @@
 
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "trip": "TripCostEstimation",
   "paymentPeriod": "Number",
   "amountPerPeriod": "Number",
@@ -56,7 +56,7 @@
 
 **Requirements:**
 
-*   plan exists and belongs to user
+*   plan exists and belongs to the user associated with the session
 
 **Effects:**
 
@@ -66,7 +66,7 @@
 
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "plan": "Plan",
   "amount": "Number"
 }
@@ -96,7 +96,7 @@
 
 **Requirements:**
 
-*   plan exists and belongs to user and amount less than or equal to currentAmount associated with plan
+*   plan exists and belongs to the user associated with the session and amount less than or equal to currentAmount associated with plan
 
 **Effects:**
 
@@ -106,7 +106,7 @@
 
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "plan": "Plan",
   "amount": "Number"
 }
@@ -136,7 +136,7 @@
 
 **Requirements:**
 
-*   `plan` exists and belongs to user
+*   `plan` exists and belongs to the user associated with the session
 
 **Effects:**
 
@@ -146,7 +146,7 @@
 
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "plan": "Plan"
 }
 ```
@@ -173,7 +173,7 @@
 
 **Requirements:**
 
-*   plan exists and belongs to user
+*   plan exists and belongs to the user associated with the session
 
 **Effects:**
 
@@ -183,7 +183,7 @@
 
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "plan": "Plan",
   "newPaymentPeriod": "Number",
   "newAmountPerPeriod": "Number"
@@ -212,7 +212,7 @@
 
 **Requirements:**
 
-*   `plan` exists and belongs to `user`.
+*   `plan` exists and belongs to the user associated with the `session`.
 
 **Effects:**
 
@@ -223,7 +223,7 @@
 
 ```json
 {
-  "user": "User",
+  "session": "Session",
   "plan": "Plan"
 }
 ```
@@ -256,13 +256,13 @@
 
 **Effects:**
 
-*   returns an array of all existing Plans belonging to user
+*   returns an array of all existing Plans belonging to the user associated with the session
 
 **Request Body:**
 
 ```json
 {
-  "user": "User"
+  "session": "Session"
 }
 ```
 
