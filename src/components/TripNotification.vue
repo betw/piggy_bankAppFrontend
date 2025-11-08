@@ -35,7 +35,6 @@
 
       <div class="plan-meta">
         <div class="necessity" v-if="travelPlan.necessity">
-          <div class="meta-title">Necessity</div>
           <div class="meta-row" v-if="travelPlan.necessity.accommodation !== undefined">Accommodation: {{ travelPlan.necessity.accommodation }}</div>
           <div class="meta-row" v-if="travelPlan.necessity.diningFlag !== undefined">Dining out: {{ travelPlan.necessity.diningFlag ? 'Yes' : 'No' }}</div>
         </div>
