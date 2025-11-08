@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import api from '../services/api'
+import { notificationAPI } from '../services/api'
 import { useUserStore } from './user'
 
 const META_STORAGE_PREFIX = 'pb_notification_meta'
@@ -127,60 +127,28 @@ function normalizeNotification(payload) {
   const notificationValue =
     container.notification !== undefined ? container.notification : container
 
+  // According to API spec, notification response is just the Notification ID
   let id = null
   if (typeof notificationValue === 'string' || typeof notificationValue === 'number') {
     id = String(notificationValue)
   } else if (notificationValue && typeof notificationValue === 'object') {
-    const candidate =
-      notificationValue.id ??
-      notificationValue.notificationId ??
-      notificationValue.notificationID ??
-      null
-    if (candidate !== null && candidate !== undefined) {
-      id = String(candidate)
-    }
+    // Check common ID fields as fallback for hydrated objects
+    id = notificationValue.id ? String(notificationValue.id) : null
   }
   if (!id) return null
 
-  const rawProgress =
-    container.progress ??
-    (typeof notificationValue === 'object' ? notificationValue.progress : null)
-  const rawUser =
-    container.user ?? (typeof notificationValue === 'object' ? notificationValue.user : null)
-  const rawFrequency =
-    container.frequency ??
-    (typeof notificationValue === 'object' ? notificationValue.frequency : null)
-  const rawMessage =
-    container.message ?? (typeof notificationValue === 'object' ? notificationValue.message : '')
-  const createdAt =
-    container.createdAt ??
-    container.created_at ??
-    container.timestamp ??
-    (typeof notificationValue === 'object'
-      ? notificationValue.createdAt ??
-        notificationValue.created_at ??
-        notificationValue.timestamp ??
-        null
-      : null)
-  const planIdentifier =
-    container.plan ??
-    container.planId ??
-    container.planID ??
-    container.travelPlan ??
-    container.travel_plan ??
-    (typeof notificationValue === 'object'
-      ? notificationValue.plan ??
-        notificationValue.planId ??
-        notificationValue.planID ??
-        notificationValue.travelPlan ??
-        notificationValue.travel_plan ??
-        null
-      : null)
+  // These fields come from getNotificationMessageAndFreq or are added locally
+  const rawProgress = container.progress ?? (typeof notificationValue === 'object' ? notificationValue.progress : null)
+  const rawFrequency = container.frequency ?? (typeof notificationValue === 'object' ? notificationValue.frequency : null)
+  const rawMessage = container.message ?? (typeof notificationValue === 'object' ? notificationValue.message : '')
+  const createdAt = container.createdAt ?? (typeof notificationValue === 'object' ? notificationValue.createdAt : null)
+  
+  // planId is not in API spec but we track it locally for navigation
+  const planIdentifier = container.planId ?? (typeof notificationValue === 'object' ? notificationValue.planId : null)
 
   return {
     id,
     progress: rawProgress !== undefined && rawProgress !== null ? String(rawProgress) : null,
-    user: rawUser !== undefined && rawUser !== null ? String(rawUser) : null,
     frequency: Number.isFinite(Number(rawFrequency)) ? Number(rawFrequency) : 0,
     message: rawMessage !== undefined && rawMessage !== null ? String(rawMessage) : '',
     planId: planIdentifier !== undefined && planIdentifier !== null ? String(planIdentifier) : null,
@@ -275,19 +243,16 @@ export const useNotificationStore = defineStore('notification', {
       this._persistNotifications()
       return merged
     },
-    async hydrateNotificationDetails(notificationId, user) {
+    async hydrateNotificationDetails(notificationId) {
       this._ensureScope()
       const id = notificationId != null ? String(notificationId) : null
-      const userId =
-        typeof user === 'object'
-          ? user?.id ?? user?.userId ?? user?.userID ?? user?.username ?? user?.name
-          : user
-      if (!id || !userId) return null
+      const userStore = useUserStore()
+      const session = userStore?.session
+      if (!id) return null
       try {
-  const res = await api.post('Notification/getNotificationMessageAndFreq', {
-          user: userId,
-          notification: id
-        })
+        const payload = { notification: id }
+        if (session) payload.session = session
+        const res = await notificationAPI.getNotificationMessageAndFreq(payload)
         if (res.data?.error) throw new Error(res.data.error)
         const messageValue = res.data?.message ?? ''
         const frequencyValue = res.data?.frequency ?? 0
@@ -313,34 +278,29 @@ export const useNotificationStore = defineStore('notification', {
         throw err?.response?.data?.error || err.message || err
       }
     },
-    async fetchNotifications(user) {
+    async fetchNotifications() {
       this._ensureScope()
-      const userId = typeof user === 'object' ? (user?.id ?? user?.userId ?? user?.userID ?? user?.username ?? user?.name) : user
-      if (!userId) return []
+      const userStore = useUserStore()
+      const session = userStore?.session
+      if (!session) return []
       try {
         const existingById = new Map(
           Array.isArray(this.notifications)
             ? this.notifications.map((item) => [item?.id, item])
             : []
         )
-        const res = await api.post('Notification/_getAllNotifications', { user: userId })
-        const list = Array.isArray(res.data) ? res.data : res.data?.notifications ?? []
+        const payload = { session }
+        const res = await notificationAPI.getAllNotifications(payload)
+        
+        // According to API spec, response is [{ notification: "Notification" }]
+        const list = Array.isArray(res.data) ? res.data : []
         const expanded = []
         list.forEach((entry) => {
           if (entry === null || entry === undefined) return
-          if (Array.isArray(entry)) {
-            entry.forEach((value) => {
-              if (value !== null && value !== undefined) expanded.push({ notification: value })
-            })
-            return
+          // Each entry should be { notification: "Notification" }
+          if (entry.notification !== undefined) {
+            expanded.push(entry)
           }
-          if (typeof entry === 'object' && Array.isArray(entry.notifications)) {
-            entry.notifications.forEach((value) => {
-              if (value !== null && value !== undefined) expanded.push({ notification: value })
-            })
-            return
-          }
-          expanded.push(entry)
         })
         const normalized = expanded
           .map((item) => normalizeNotification(item))
@@ -376,8 +336,20 @@ export const useNotificationStore = defineStore('notification', {
         console.log('[notification] fetchNotifications result', {
           raw: res.data,
           expanded: expanded,
-          normalized: normalized.map((item) => ({ id: item.id, message: item.message, progress: item.progress }))
+          normalized: normalized.map((item) => ({ id: item.id, message: item.message, progress: item.progress })),
+          existingLocal: Array.from(existingById.values()).map(n => ({ id: n.id, message: n.message, synthetic: n.synthetic }))
         })
+        
+        // Preserve locally created (synthetic) notifications that aren't in the backend response
+        const backendIds = new Set(normalized.map(n => n.id))
+        const localOnlyNotifications = Array.from(existingById.values())
+          .filter(n => n.synthetic && !backendIds.has(n.id))
+        
+        if (localOnlyNotifications.length > 0) {
+          console.log('[notification] Preserving local-only notifications:', localOnlyNotifications.map(n => ({ id: n.id, message: n.message })))
+          normalized.push(...localOnlyNotifications)
+        }
+        
         this.notifications = sortNewestFirst(normalized, this.meta)
         if (!normalized.length) {
           this._persistNotifications()
@@ -409,7 +381,7 @@ export const useNotificationStore = defineStore('notification', {
         this._persistNotifications()
         await Promise.all(
           normalized.map((notif) =>
-            this.hydrateNotificationDetails(notif.id, userId).catch((err) => {
+            this.hydrateNotificationDetails(notif.id).catch((err) => {
               console.error('[notification] fetchNotifications hydrate error:', err)
               return null
             })
@@ -423,17 +395,16 @@ export const useNotificationStore = defineStore('notification', {
         throw err?.response?.data?.error || err.message || err
       }
     },
-    async deleteNotification(notificationId, user) {
+    async deleteNotification(notificationId) {
       this._ensureScope()
       const id = notificationId != null ? String(notificationId) : null
-      const userId =
-        typeof user === 'object'
-          ? user?.id ?? user?.userId ?? user?.userID ?? user?.username ?? user?.name
-          : user
+      const userStore = useUserStore()
+      const session = userStore?.session
       if (!id) throw new Error('deleteNotification: missing notification id')
-      if (!userId) throw new Error('deleteNotification: missing user id')
+      if (!session) throw new Error('deleteNotification: missing session')
       try {
-        await api.post('Notification/deleteNotification', { user: userId, notification: id })
+        const payload = { notification: id, session }
+        await notificationAPI.deleteNotification(payload)
       } catch (err) {
         console.error('[notification] deleteNotification error:', err)
         throw err?.response?.data?.error || err.message || err
@@ -452,6 +423,9 @@ export const useNotificationStore = defineStore('notification', {
     },
     async createNotification(payload, options = {}) {
       this._ensureScope()
+      const userStore = useUserStore()
+      const session = userStore?.session
+      
       const metaExtras = {
         planId:
           options?.planId !== undefined && options?.planId !== null
@@ -461,7 +435,24 @@ export const useNotificationStore = defineStore('notification', {
             : null
       }
       try {
-        const res = await api.post('Notification/createNotification', payload)
+        const apiPayload = { ...payload }
+        if (session) apiPayload.session = session
+        // Keep user field if provided in payload (backend may require it)
+        // Only remove it if session exists and user is not provided
+        if (!apiPayload.user && !session) {
+          console.warn('[notification] createNotification: no user or session provided')
+        }
+        
+        console.log('[notification] createNotification API payload:', apiPayload)
+        
+        const res = await notificationAPI.createNotification(apiPayload)
+        
+        console.log('[notification] createNotification API response:', {
+          status: res.status,
+          data: res.data,
+          hasError: !!res.data?.error
+        })
+        
         if (res.data?.error) throw new Error(res.data.error)
         const normalizedFromResponse =
           normalizeNotification(res.data) || normalizeNotification(res.data?.notification)
@@ -472,11 +463,6 @@ export const useNotificationStore = defineStore('notification', {
                 normalizedFromResponse.progress ??
                 (payload?.progress !== undefined && payload?.progress !== null
                   ? String(payload.progress)
-                  : null),
-              user:
-                normalizedFromResponse.user ??
-                (payload?.user !== undefined && payload?.user !== null
-                  ? String(payload.user)
                   : null),
               frequency:
                 normalizedFromResponse.frequency !== undefined
@@ -504,10 +490,6 @@ export const useNotificationStore = defineStore('notification', {
             progress:
               payload?.progress !== undefined && payload?.progress !== null
                 ? String(payload.progress)
-                : null,
-            user:
-              payload?.user !== undefined && payload?.user !== null
-                ? String(payload.user)
                 : null,
             frequency: Number.isFinite(Number(payload?.frequency)) ? Number(payload.frequency) : 0,
             message: payload?.message ? String(payload.message) : '',

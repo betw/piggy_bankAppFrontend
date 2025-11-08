@@ -15,12 +15,26 @@ export const authAPI = {
     return api.post('/PasswordAuthentication/register', { username, password })
   },
 
+  async authenticate(username, password) {
+    return api.post('/PasswordAuthentication/authenticate', { username, password })
+  },
+
   async login(username, password) {
     return api.post('/login', { username, password })
   },
 
   async logout(session) {
     return api.post('/logout', { session })
+  },
+
+  async getAllUsers(payload) {
+    // payload: { session? }
+    return api.post('/PasswordAuthentication/_getAllUsers', payload)
+  },
+
+  async getUserUsername(payload) {
+    // payload: { user, session? }
+    return api.post('/PasswordAuthentication/_getUserUsername', payload)
   }
 }
 
@@ -32,53 +46,118 @@ export const costEstimateAPI = {
   // Travel plan lifecycle
   async createTravelPlan(payload) {
     // payload: { fromCity, toCity, fromDate, toDate, session? }
-    return api.post('TripCostEstimation/createTravelPlan', payload)
+    return api.post('/TripCostEstimation/createTravelPlan', payload)
   },
   async deleteTravelPlan(payload) {
     // payload: { travelPlan, session? }
-    return api.post('TripCostEstimation/deleteTravelPlan', payload)
+    return api.post('/TripCostEstimation/deleteTravelPlan', payload)
   },
 
   // Necessities
   async updateNecessity(payload) {
     // payload: { travelPlan, accommodation, diningFlag, session? }
-    return api.post('TripCostEstimation/updateNecessity', payload)
+    return api.post('/TripCostEstimation/updateNecessity', payload)
   },
   async resetNecessity(payload) {
     // payload: { travelPlan, session? }
-    return api.post('TripCostEstimation/resetNecessity', payload)
+    return api.post('/TripCostEstimation/resetNecessity', payload)
   },
 
   // Estimates (AI and manual)
   async generateAICostEstimate(payload) {
     // payload: { travelPlan, session? }
-    return api.post('TripCostEstimation/generateAICostEstimate', payload)
+    return api.post('/TripCostEstimation/generateAICostEstimate', payload)
   },
   async estimateCost(payload){
     // payload: { travelPlan, session? }
-    return api.post('TripCostEstimation/estimateCost', payload)
+    return api.post('/TripCostEstimation/estimateCost', payload)
   },
   async editEstimateCost(payload) {
     // payload: { travelPlan, flight, roomsPerNight, foodDaily, session? }
-    return api.post('TripCostEstimation/editEstimateCost', payload)
+    return api.post('/TripCostEstimation/editEstimateCost', payload)
   },
   async deleteEstimateCost(payload) {
     // payload: { costEstimate, session? }
-    return api.post('TripCostEstimation/deleteEstimateCost', payload)
+    return api.post('/TripCostEstimation/deleteEstimateCost', payload)
   },
 
   // Queries
   async getTravelCities(payload) {
     // payload: { travelPlan, session? }
-    return api.post('TripCostEstimation/getTravelCities', payload)
+    return api.post('/TripCostEstimation/getTravelCities', payload)
   },
   async getTravelDates(payload) {
     // payload: { travelPlan, session? }
-    return api.post('TripCostEstimation/getTravelDates', payload)
+    return api.post('/TripCostEstimation/getTravelDates', payload)
   },
   async getAllTravelPlans(payload) {
     // payload: { session? }
-    return api.post('TripCostEstimation/_getAllTravelPlans', payload)
+    return api.post('/TripCostEstimation/_getAllTravelPlans', payload)
+  }
+}
+
+/**
+ * Notification API
+ */
+export const notificationAPI = {
+  async createNotification(payload) {
+    // payload: { progress, message, frequency, session? }
+    return api.post('/Notification/createNotification', payload)
+  },
+
+  async getNotificationMessageAndFreq(payload) {
+    // payload: { notification, session? }
+    return api.post('/Notification/getNotificationMessageAndFreq', payload)
+  },
+
+  async deleteNotification(payload) {
+    // payload: { notification, session? }
+    return api.post('/Notification/deleteNotification', payload)
+  },
+
+  async getAllNotifications(payload) {
+    // payload: { session? }
+    return api.post('/Notification/_getAllNotifications', payload)
+  }
+}
+
+/**
+ * Progress Tracking API
+ */
+export const progressTrackingAPI = {
+  async createPlan(payload) {
+    // payload: { goalAmount, paymentPeriod, session? }
+    return api.post('/ProgressTracking/createPlan', payload)
+  },
+
+  async addAmount(payload) {
+    // payload: { plan, amount, session? }
+    return api.post('/ProgressTracking/addAmount', payload)
+  },
+
+  async removeAmount(payload) {
+    // payload: { plan, amount, session? }
+    return api.post('/ProgressTracking/removeAmount', payload)
+  },
+
+  async deletePlan(payload) {
+    // payload: { plan, session? }
+    return api.post('/ProgressTracking/deletePlan', payload)
+  },
+
+  async modifyPlan(payload) {
+    // payload: { plan, goalAmount?, paymentPeriod?, session? }
+    return api.post('/ProgressTracking/modifyPlan', payload)
+  },
+
+  async updateGoalStatus(payload) {
+    // payload: { plan, goalStatus, session? }
+    return api.post('/ProgressTracking/updateGoalStatus', payload)
+  },
+
+  async getPlans(payload) {
+    // payload: { session? }
+    return api.post('/ProgressTracking/_getPlans', payload)
   }
 }
 

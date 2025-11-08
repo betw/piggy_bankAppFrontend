@@ -63,9 +63,15 @@ export default {
       return false
     }
 
-    const otherNotifications = computed(() =>
-      allNotifications.value.filter((item) => !isMilestoneNotification(item))
-    )
+    const otherNotifications = computed(() => {
+      const filtered = allNotifications.value.filter((item) => !isMilestoneNotification(item))
+      console.log('[notifications view] otherNotifications computed:', {
+        total: allNotifications.value.length,
+        filtered: filtered.length,
+        items: filtered.map(n => ({ id: n.id, message: n.message, progress: n.progress }))
+      })
+      return filtered
+    })
     const hasNotifications = computed(() => allNotifications.value.length > 0)
 
     function normalizeId(value) {
@@ -238,28 +244,8 @@ export default {
       if (!notif) return
       const notificationId = normalizeId(notif.id ?? null)
       if (!notificationId) return
-      let user = userStore.currentUser
-      if (!user) {
-        try {
-          if (typeof userStore.hydrate === 'function') {
-            const maybePromise = userStore.hydrate()
-            if (maybePromise && typeof maybePromise.then === 'function') {
-              await maybePromise.catch((err) => {
-                console.error('[notifications view] hydrate user failed:', err)
-              })
-            }
-          }
-        } catch (err) {
-          console.error('[notifications view] failed to hydrate user before delete:', err)
-        }
-        user = userStore.currentUser
-      }
-      if (!user) {
-        console.warn('[notifications view] deleteNotification skipped: missing user context')
-        return
-      }
       try {
-        await notificationStore.deleteNotification(notificationId, user)
+        await notificationStore.deleteNotification(notificationId)
       } catch (err) {
         console.error('[notifications view] failed to delete notification:', err)
       }
@@ -271,10 +257,9 @@ export default {
       return value === 1 ? 'Every month' : `Every ${value} months`
     }
 
-    async function loadNotificationsForUser(user) {
-      if (!user) return
+    async function loadNotificationsForUser() {
       try {
-        await notificationStore.fetchNotifications(user)
+        await notificationStore.fetchNotifications()
       } catch (err) {
         console.error('[notifications view] failed to load notifications:', err)
       }
@@ -289,7 +274,7 @@ export default {
       }
       userStore.hydrate()
       if (userStore.currentUser) {
-        loadNotificationsForUser(userStore.currentUser)
+        loadNotificationsForUser()
       }
     })
 
@@ -300,7 +285,7 @@ export default {
           if (typeof notificationStore.hydrate === 'function') {
             notificationStore.hydrate()
           }
-          loadNotificationsForUser(user)
+          loadNotificationsForUser()
         }
       },
       { immediate: false }

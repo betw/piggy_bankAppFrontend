@@ -96,8 +96,10 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import api from '../services/api'
+import { progressTrackingAPI } from '../services/api'
 import { useTravelPlanStore } from '../stores/travelPlan'
+import { useUserStore } from '../stores/user'
+import { useNotificationStore } from '../stores/notification'
 
 const props = defineProps({
   progress: { type: Number, default: 0 },
@@ -124,6 +126,8 @@ const adjustAmount = ref('')
 const adjustError = ref('')
 const adjustNotice = ref('')
 const travelPlanStore = useTravelPlanStore()
+const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 
 const fallbackProgress = computed(() => (Number.isFinite(props.progress) ? props.progress : 0))
 
@@ -188,9 +192,10 @@ function formatCurrency(amount) {
 
 async function createPlan() {
   error.value = ''
+  const session = userStore?.session
   if (!canSubmit.value) {
     error.value = hasResolvedTotalCost.value
-      ? 'Provide user, travel goal, and plan details before submitting.'
+      ? 'Provide travel goal and plan details before submitting.'
       : 'Estimate or enter your trip cost before creating a savings plan.'
     return
   }
@@ -206,37 +211,31 @@ async function createPlan() {
 
   try {
     const payload = {
-      user: props.userId,
       trip: String(props.travelPlanId),
       paymentPeriod: parseNonNegative(form.paymentPeriod, 'Payment period', false),
       amountPerPeriod: parseNonNegative(form.amountPerPeriod, 'Amount per period'),
       goalAmount: parseNonNegative(form.goalAmount, 'Goal amount')
     }
+    if (session) payload.session = session
     submitting.value = true
-    const res = await api.post('ProgressTracking/createPlan', payload)
+    console.log('[TravelProgress] Calling createPlan API with payload:', payload)
+    const res = await progressTrackingAPI.createPlan(payload)
+    console.log('[TravelProgress] createPlan API response:', res.data)
     if (res.data?.error) throw new Error(res.data.error)
-    const progressIdCandidate =
-      res.data?.planId ??
-      res.data?.planID ??
-      res.data?.plan_id ??
-      res.data?.progressTrackingId ??
-      res.data?.progressTrackingID ??
-      res.data?.progress_tracking_id ??
-      res.data?.plan?.id ??
-      res.data?.plan?.planId ??
-      res.data?.plan?.planID ??
-      res.data?.plan?.progressTrackingId ??
-      res.data?.plan?.progressTrackingID ??
-      res.data?.plan?.progress_tracking_id ??
-      null
-    const normalizedProgressId =
-      progressIdCandidate !== null && progressIdCandidate !== undefined
-        ? String(progressIdCandidate)
-        : null
+    
+    // According to API spec, response has: { plan: "Plan", paymentPeriod: "Number", amountPerPeriod: "Number" }
+    const normalizedProgressId = res.data?.plan ? String(res.data.plan) : null
+    
+    console.log('[TravelProgress] Extracted progress ID:', {
+      normalizedProgressId,
+      willCreateNotification: !!normalizedProgressId
+    })
+    
+    // According to API spec, response has: paymentPeriod and amountPerPeriod
     const summary = {
       paymentPeriod: res.data?.paymentPeriod ?? payload.paymentPeriod,
       amountPerPeriod: res.data?.amountPerPeriod ?? payload.amountPerPeriod,
-      goalAmount: res.data?.goalAmount ?? res.data?.plan?.goalAmount ?? payload.goalAmount
+      goalAmount: payload.goalAmount // API spec doesn't return goalAmount, use what we sent
     }
     planSummary.value = summary
     if (summary.paymentPeriod !== undefined && summary.paymentPeriod !== null) {
@@ -270,8 +269,67 @@ async function createPlan() {
         id: normalizedProgressId
       })
     }
+    
+    console.log('[TravelProgress] About to create notification, normalizedProgressId:', normalizedProgressId)
+    
+    // Handle savings reminder notification from backend response
+    // The backend does NOT automatically create a notification, so we must create it manually
+    if (normalizedProgressId) {
+      try {
+        // Create a savings reminder notification
+        const reminderMessage = `Savings reminder: set aside $${summary.amountPerPeriod} every ${summary.paymentPeriod} months.`
+        
+        // Get user from userStore for the notification payload
+        const currentUser = userStore?.currentUser || userStore?.username
+        
+        console.log('[TravelProgress] Creating savings reminder notification with:', {
+          user: currentUser,
+          progress: normalizedProgressId,
+          message: reminderMessage,
+          frequency: summary.paymentPeriod,
+          planId: props.travelPlanId,
+          session: session
+        })
+        
+        const notificationPayload = {
+          progress: normalizedProgressId,
+          message: reminderMessage,
+          frequency: summary.paymentPeriod ?? 0
+        }
+        
+        // Add user if available (backend may require it even with session)
+        if (currentUser) {
+          notificationPayload.user = currentUser
+        }
+        
+        const createdNotif = await notificationStore.createNotification(
+          notificationPayload,
+          {
+            planId: props.travelPlanId,
+            reminderType: 'savings_reminder'
+          }
+        )
+        console.log('[TravelProgress] Created savings reminder notification:', createdNotif)
+        console.log('[TravelProgress] Current notifications in store:', notificationStore.notifications)
+        
+        // Refetch notifications to ensure they are in sync with backend
+        try {
+          await notificationStore.fetchNotifications()
+          console.log('[TravelProgress] After refetch, notifications in store:', notificationStore.notifications)
+        } catch (fetchErr) {
+          console.warn('[TravelProgress] Failed to refetch notifications:', fetchErr)
+          // If refetch fails, the locally created notification should still be in the store
+        }
+      } catch (notifErr) {
+        console.error('[TravelProgress] Failed to create savings reminder notification:', notifErr)
+        alert('Failed to create savings reminder notification. Please check the console for details.')
+      }
+    }
+    
     formOpen.value = false
+    console.log('[TravelProgress] createPlan completed successfully')
   } catch (err) {
+    console.error('[TravelProgress] createPlan error:', err)
     error.value = err?.message || String(err)
   } finally {
     submitting.value = false

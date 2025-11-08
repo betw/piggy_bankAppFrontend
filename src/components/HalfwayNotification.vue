@@ -23,7 +23,6 @@
     </header>
     <div class="body">
       <p class="message">{{ notification.message }}</p>
-      <p v-if="frequencyLabel" class="frequency">Frequency: {{ frequencyLabel }}</p>
       <div v-if="travelPlanSummary" class="plan-details">
         <div class="plan-row">
           <span class="label">From:</span>
