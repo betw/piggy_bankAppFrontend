@@ -65,11 +65,6 @@ export default {
 
     const otherNotifications = computed(() => {
       const filtered = allNotifications.value.filter((item) => !isMilestoneNotification(item))
-      console.log('[notifications view] otherNotifications computed:', {
-        total: allNotifications.value.length,
-        filtered: filtered.length,
-        items: filtered.map(n => ({ id: n.id, message: n.message, progress: n.progress }))
-      })
       return filtered
     })
     const hasNotifications = computed(() => allNotifications.value.length > 0)
@@ -139,7 +134,6 @@ export default {
         const snapshot = Array.isArray(current)
           ? current.map((item) => ({ id: item?.id, message: item?.message, progress: item?.progress }))
           : current
-        console.log('[notifications view] store notifications', snapshot)
       },
       { immediate: true, deep: true }
     )
@@ -150,7 +144,6 @@ export default {
         const snapshot = Array.isArray(current)
           ? current.map((item) => ({ id: item?.id, message: item?.message, progress: item?.progress }))
           : current
-        console.log('[notifications view] milestone notifications', snapshot)
       },
       { immediate: true, deep: true }
     )
@@ -161,7 +154,6 @@ export default {
 
     function goToGoalDetail(id) {
       const planId = normalizeId(id)
-      console.log('[notifications view] goToGoalDetail invoked', { id, planId })
       if (!planId) return
       const plan = planForNotification(planId) || travelPlanStore.plans?.[planId]
       if (!plan) {
@@ -180,7 +172,6 @@ export default {
         travelPlanStore.setCurrentPlan({ id: planId, progressTrackingId: planId })
       }
       const routeId = planToCache ? normalizeId(firstPlanIdentifier(planToCache)) ?? planId : planId
-    console.log('[notifications view] navigating to goal', { planId: routeId, original: planId })
     router.push(`/goal/${routeId}`)
     }
 
@@ -192,12 +183,6 @@ export default {
     function findPlanOrNotification(notif) {
       if (!notif) return null
       const progressId = normalizeId(notif.progress)
-      console.log('[notifications view] resolve notification', {
-        notifId: notif.id,
-        planId: notif.planId,
-        progress: notif.progress,
-        progressId
-      })
       if (progressId) {
         const plan = planForNotification(progressId)
         if (plan) return { plan, id: progressId }
@@ -225,7 +210,6 @@ export default {
     function navigateToNotification(notif) {
       if (!notif) return
       const lookup = findPlanOrNotification(notif)
-      console.log('[notifications view] navigateToNotification', { notif, lookup })
       if (lookup?.plan && notif?.id && typeof notificationStore.setNotificationMeta === 'function') {
         const canonicalId =
           firstPlanIdentifier(lookup.plan) ?? lookup.id ?? notif.planId ?? notif.progress ?? notif.id ?? null

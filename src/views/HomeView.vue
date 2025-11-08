@@ -63,7 +63,6 @@ export default {
     async function onSubmit() {
       // guard to avoid double-submit
       if (loading.value) return
-      console.log('[HomeView] onSubmit called')
       error.value = null
       // basic date validation
       if (!fromDate.value || !toDate.value) {
@@ -107,8 +106,6 @@ export default {
             fromDate: fromDate.value,
             toDate: toDate.value
           }
-          // debug: show the payload in browser console so we can confirm handler ran
-          console.log('[HomeView] submitting travel plan', body)
             // require login before creating a travel plan
             const travelPlan = await travelPlanStore.createTravelPlan(body)
           const id = travelPlan?.id ?? travelPlan
@@ -125,8 +122,6 @@ export default {
           loading.value = false
         }
     }
-
-    onMounted(() => console.log('[HomeView] mounted'))
 
     function goLogin() {
       router.push('/login')

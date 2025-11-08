@@ -218,18 +218,11 @@ async function createPlan() {
     }
     if (session) payload.session = session
     submitting.value = true
-    console.log('[TravelProgress] Calling createPlan API with payload:', payload)
     const res = await progressTrackingAPI.createPlan(payload)
-    console.log('[TravelProgress] createPlan API response:', res.data)
     if (res.data?.error) throw new Error(res.data.error)
     
     // According to API spec, response has: { plan: "Plan", paymentPeriod: "Number", amountPerPeriod: "Number" }
     const normalizedProgressId = res.data?.plan ? String(res.data.plan) : null
-    
-    console.log('[TravelProgress] Extracted progress ID:', {
-      normalizedProgressId,
-      willCreateNotification: !!normalizedProgressId
-    })
     
     // According to API spec, response has: paymentPeriod and amountPerPeriod
     const summary = {
@@ -270,22 +263,12 @@ async function createPlan() {
       })
     }
     
-    console.log('[TravelProgress] About to create notification, normalizedProgressId:', normalizedProgressId)
-    
     // Handle savings reminder notification from backend response
     // The backend does NOT automatically create a notification, so we must create it manually
     if (normalizedProgressId) {
       try {
         // Create a savings reminder notification
         const reminderMessage = `Savings reminder: set aside $${summary.amountPerPeriod} every ${summary.paymentPeriod} months.`
-        
-        console.log('[TravelProgress] Creating savings reminder notification with:', {
-          progress: normalizedProgressId,
-          message: reminderMessage,
-          frequency: summary.paymentPeriod,
-          planId: props.travelPlanId,
-          session: session
-        })
         
         const notificationPayload = {
           progress: normalizedProgressId,
@@ -300,13 +283,10 @@ async function createPlan() {
             reminderType: 'savings_reminder'
           }
         )
-        console.log('[TravelProgress] Created savings reminder notification:', createdNotif)
-        console.log('[TravelProgress] Current notifications in store:', notificationStore.notifications)
         
         // Refetch notifications to ensure they are in sync with backend
         try {
           await notificationStore.fetchNotifications()
-          console.log('[TravelProgress] After refetch, notifications in store:', notificationStore.notifications)
         } catch (fetchErr) {
           console.warn('[TravelProgress] Failed to refetch notifications:', fetchErr)
           // If refetch fails, the locally created notification should still be in the store
@@ -318,7 +298,6 @@ async function createPlan() {
     }
     
     formOpen.value = false
-    console.log('[TravelProgress] createPlan completed successfully')
   } catch (err) {
     console.error('[TravelProgress] createPlan error:', err)
     error.value = err?.message || String(err)
